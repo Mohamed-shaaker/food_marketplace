@@ -1,0 +1,25 @@
+# --- SECURITY ---
+.env
+*.pem
+*.key
+
+# --- PYTHON ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv
+venv/
+ENV/
+
+# --- DOCKER ---
+.docker/
+
+# --- IDE & SYSTEM ---
+.vscode/
+.idea/
+.DS_Store
+*.log
+
+# --- PROJECT SPECIFIC ---
+alembic/versions/__pycache__/

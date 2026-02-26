@@ -1,0 +1,34 @@
+# Food Marketplace Backend (V1)
+
+A production-ready, monolithic FastAPI backend for a multi-vendor food marketplace. This system handles the complete order lifecycle, including role-based access, automated wallet management, and Mobile Money webhook integration.
+
+## Architecture
+
+- **System Design**: Monolith Backend
+- **Framework**: FastAPI (Python 3.11)
+- **Database**: PostgreSQL 15 with SQLAlchemy ORM
+- **Deployment**: Docker & Docker Compose
+- **Communication**: REST API
+
+## Core Features
+
+- **Authentication**: JWT-based auth with bcrypt password hashing.
+- **Role-Based Access**: Specialized routing for Customers, Restaurants, and Admins.
+- **Marketplace Logic**: Restaurant and Menu lifecycle management.
+- **Order Processing**: End-to-end order state management with commission calculation.
+- **Embedded Finance**: Internal Wallet system with strict transaction tracking.
+- **Payments**: Webhook verification for external payment providers (Mobile Money).
+
+## Getting Started
+
+### 1. Environment Setup
+
+Create a `.env` file in the root directory (use `.env.example` as a template for required variables like `DATABASE_URL` and `SECRET_KEY`).
+
+### 2. Docker Deployment
+
+Build and spin up the API and Database containers:
+
+```bash
+docker-compose up --build -d
+```
