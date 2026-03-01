@@ -1,25 +1,21 @@
-# --- SECURITY ---
-.env
-*.pem
-*.key
+# Node dependencies
+node_modules/
+dist/
+.eslintcache
 
-# --- PYTHON ---
+# Python/Django/FastAPI
 __pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
-.venv
+.venv/
 venv/
 ENV/
+.env
 
-# --- DOCKER ---
-.docker/
-
-# --- IDE & SYSTEM ---
+# IDEs
 .vscode/
 .idea/
-.DS_Store
-*.log
 
-# --- PROJECT SPECIFIC ---
-alembic/versions/__pycache__/
+# OS files
+.DS_Store
+Thumbs.db
