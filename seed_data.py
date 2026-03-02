@@ -18,12 +18,13 @@ def seed():
         owner_email = "owner@pizza.com"
         owner = db.query(User).filter(User.email == owner_email).first()
         
-        if not owner:
+       if not owner:
             print(f"Attempting to create owner: {owner_email}")
             owner = User(
                 email=owner_email,
                 hashed_password=get_password_hash("password123"),
-                role="restaurant_owner"  # <--- MUST BE LOWERCASE
+                role="RESTAURANT"  # <--- CHANGED FROM "restaurant_owner" TO "RESTAURANT"
+             
             )
             db.add(owner)
             db.flush()

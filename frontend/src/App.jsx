@@ -1,50 +1,45 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import Login from "./pages/Login";
+import Restaurants from "./pages/Restaurants";
+import Menu from "./pages/Menu";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
-  const [restaurants, setRestaurants] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    // We call your FastAPI backend here
-    axios
-      .get("http://localhost:8000/api/restaurants")
-      .then((response) => {
-        setRestaurants(response.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Connection error:", err);
-        setError("Could not connect to the Backend.");
-        setLoading(false);
-      });
-  }, []);
-
   return (
-    <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
-      <h1>🍕 Food Marketplace</h1>
-      <hr />
+    <Router>
+      <Routes>
+        {/* Public Login Page */}
+        <Route path="/login" element={<Login />} />
 
-      {loading && <p>Loading delicious food...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+        {/* Protected Restaurant List */}
+        <Route
+          path="/restaurants"
+          element={
+            <ProtectedRoute>
+              <Restaurants />
+            </ProtectedRoute>
+          }
+        />
 
-      <div style={{ display: "grid", gap: "20px", marginTop: "20px" }}>
-        {restaurants.map((res) => (
-          <div
-            key={res.id}
-            style={{
-              border: "1px solid #ccc",
-              padding: "15px",
-              borderRadius: "8px",
-            }}
-          >
-            <h2>{res.name}</h2>
-            <p>Commission Rate: {res.commission_rate * 100}%</p>
-          </div>
-        ))}
-      </div>
-    </div>
+        {/* Protected Dynamic Menu Page */}
+        <Route
+          path="/restaurants/:id"
+          element={
+            <ProtectedRoute>
+              <Menu />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Automatic Redirects */}
+        <Route path="/" element={<Navigate to="/restaurants" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
