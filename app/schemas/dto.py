@@ -28,6 +28,13 @@ class OrderItemCreate(BaseModel):
 class OrderCreate(BaseModel):
     restaurant_id: int
     items: List[OrderItemCreate]
+    
+class OrderOut(BaseModel):
+    id: int
+    status: str
+    total_amount: float
+    
+    model_config = {"from_attributes": True}  
 
 class WalletResponse(BaseModel):
     balance: float
@@ -44,6 +51,7 @@ class RestaurantOut(BaseModel):
     id: int
     name: str
     commission_rate: float
+    image_url: Optional[str] = None
     menu_items: Optional[List[MenuItemOut]] = None
 
     model_config = {"from_attributes": True}

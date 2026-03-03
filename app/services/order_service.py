@@ -4,10 +4,14 @@ from app.services.wallet_service import update_wallet_balance
 from fastapi import HTTPException
 
 def create_order(db: Session, user_id: int, restaurant_id: int, items_data: list):
+    # Fetch restaurant to get commission rate
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
     total_amount = 0.0
     order_items = []
     
-    # 1. Validate items and calculate total
     for item in items_data:
         menu_item = db.query(MenuItem).filter(
             MenuItem.id == item.menu_item_id, 
@@ -15,25 +19,35 @@ def create_order(db: Session, user_id: int, restaurant_id: int, items_data: list
         ).first()
         
         if not menu_item:
-            raise HTTPException(status_code=400, detail=f"Invalid menu item: {item.menu_item_id}")
+            raise HTTPException(status_code=400, detail=f"Invalid item: {item.menu_item_id}")
             
         total_amount += menu_item.price * item.quantity
         order_items.append(
             OrderItem(menu_item_id=menu_item.id, quantity=item.quantity, price_at_time=menu_item.price)
         )
 
-    # 2. Create Order
-    db_order = Order(user_id=user_id, restaurant_id=restaurant_id, total_amount=total_amount)
-    db.add(db_order)
-    db.commit()
-    db.refresh(db_order)
+    # NEW: Calculate financials immediately for the database
+    commission = total_amount * restaurant.commission_rate
+    payout = total_amount - commission
 
-    # 3. Add Order Items
+    # 2. Create Order with NEW columns
+    db_order = Order(
+        user_id=user_id, 
+        restaurant_id=restaurant_id, 
+        total_amount=total_amount,
+        commission_amount=commission, # Matches your domain.py
+        payout_amount=payout,         # Matches your domain.py
+        status=OrderStatus.PENDING
+    )
+    db.add(db_order)
+    db.flush() # Get ID
+
     for oi in order_items:
         oi.order_id = db_order.id
         db.add(oi)
+    
     db.commit()
-
+    db.refresh(db_order)
     return db_order
 
 def process_order_payment(db: Session, order_id: int):

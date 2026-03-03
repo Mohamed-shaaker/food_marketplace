@@ -19,7 +19,14 @@ const Menu = () => {
       try {
         setLoading(true);
         const response = await axios.get(`/api/restaurants/${id}/menu`);
-        setMenuItems(response.data);
+
+        // Injection Logic: Add the restaurant_id to every item
+        const itemsWithRestaurantId = response.data.map((item) => ({
+          ...item,
+          restaurant_id: parseInt(id), // Ensure it's a number
+        }));
+
+        setMenuItems(itemsWithRestaurantId);
       } catch (err) {
         setError("Failed to load the menu. Please try again.");
         console.error(err);

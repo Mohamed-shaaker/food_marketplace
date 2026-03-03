@@ -11,11 +11,11 @@ class UserRole(str, PyEnum):
     ADMIN = "admin"
 
 class OrderStatus(str, PyEnum):
-    PENDING = "pending"
-    PAID = "paid"
-    PREPARING = "preparing"
-    DELIVERED = "delivered"
-    CANCELLED = "cancelled"
+    PENDING = "PENDING"
+    PAID = "PAID"
+    PREPARING = "PREPARING"
+    DELIVERED = "DELIVERED"
+    CANCELLED = "CANCELLED"
 
 class User(Base):
     __tablename__ = "users"
@@ -31,10 +31,12 @@ class Restaurant(Base):
     id = Column(Integer, primary_key=True, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String, index=True)
-    commission_rate = Column(Float, default=0.10) # 10% marketplace fee
+    commission_rate = Column(Float, default=0.10)
+    # ADD THIS LINE HERE:
+    image_url = Column(String, nullable=True) 
+    
     owner = relationship("User", back_populates="restaurants")
     menu_items = relationship("MenuItem", back_populates="restaurant")
-
 class MenuItem(Base):
     __tablename__ = "menu_items"
     id = Column(Integer, primary_key=True, index=True)
@@ -48,11 +50,22 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"))
-    total_amount = Column(Float, nullable=False)
-    status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
+    
+    # NEW: Added driver_id and payment_status from your implementation plan
+    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True) 
+    payment_status = Column(String, default="pending") # e.g., pending, completed, failed
+    
+    # Financial snapshots (Strict Logic)
+    total_amount = Column(Float, nullable=False)      # What customer pays
+    commission_amount = Column(Float, nullable=False) # 10% Platform fee
+    payout_amount = Column(Float, nullable=False)     # What restaurant gets
+    
+    status = Column(
+        Enum(OrderStatus, name="orderstatus", create_type=False),
+        default=OrderStatus.PENDING,
+    )
     created_at = Column(DateTime, default=datetime.utcnow)
     items = relationship("OrderItem", back_populates="order")
-
 class OrderItem(Base):
     __tablename__ = "order_items"
     id = Column(Integer, primary_key=True, index=True)

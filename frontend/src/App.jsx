@@ -7,6 +7,7 @@ import {
 import Login from "./pages/Login";
 import Restaurants from "./pages/Restaurants";
 import Menu from "./pages/Menu";
+import OrderStatus from "./components/OrderStatus";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -32,6 +33,16 @@ function App() {
           element={
             <ProtectedRoute>
               <Menu />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* NEW: Protected Order Status Confirmation Page */}
+        <Route
+          path="/order-status/:id"
+          element={
+            <ProtectedRoute>
+              <OrderStatus />
             </ProtectedRoute>
           }
         />
