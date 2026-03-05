@@ -32,8 +32,7 @@ class Restaurant(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String, index=True)
     commission_rate = Column(Float, default=0.10)
-    # ADD THIS LINE HERE:
-    image_url = Column(String, nullable=True) 
+    image_url = Column(String, nullable=True)
     
     owner = relationship("User", back_populates="restaurants")
     menu_items = relationship("MenuItem", back_populates="restaurant")

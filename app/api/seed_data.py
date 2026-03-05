@@ -9,7 +9,6 @@ from app.core.database import SessionLocal
 from app.core.security import get_password_hash
 from app.models.domain import MenuItem, Restaurant, User, UserRole, Wallet
 
-
 def seed() -> None:
     db = SessionLocal()
     try:
@@ -47,23 +46,16 @@ def seed() -> None:
                 "Pizza Planet",
                 0.10,
                 "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1200&auto=format&fit=crop",
-                [
-                    ("Pepperoni Pizza", 14.99),
-                    ("Margherita Pizza", 12.50),
-                ],
+                [("Pepperoni Pizza", 14.99), ("Margherita Pizza", 12.50)],
             ),
             (
                 "Burger Royale",
                 0.12,
                 "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&auto=format&fit=crop",
-                [
-                    ("Classic Burger", 10.99),
-                    ("Double Cheeseburger", 13.49),
-                ],
+                [("Classic Burger", 10.99), ("Double Cheeseburger", 13.49)],
             ),
         ]
 
-        created_restaurants = []
         for name, rate, image_url, items in restaurants_to_add:
             restaurant = Restaurant(
                 name=name,
@@ -74,52 +66,24 @@ def seed() -> None:
             db.add(restaurant)
             db.flush()
             print(f"Added restaurant: {name}")
-            created_restaurants.append(restaurant)
 
-            created_items = []
-            for item_name, item_price in items:
-                menu_item = MenuItem(
-                    restaurant_id=restaurant.id,
-                    name=item_name,
-                    price=item_price,
-                )
-                db.add(menu_item)
-                db.flush()
-                created_items.append(menu_item)
-                print(
-                    f"Added menu item id={menu_item.id} name={menu_item.name} "
-                    f"restaurant_id={menu_item.restaurant_id}"
-                )
-
-            if any(item.restaurant_id != restaurant.id for item in created_items):
-                raise RuntimeError(f"Menu item linkage mismatch detected for {name}")
-            print(f"Added menu items for: {name}")
-
-        print("--- Link verification ---")
-        for restaurant in created_restaurants:
-            linked_items = (
-                db.query(MenuItem)
-                .filter(MenuItem.restaurant_id == restaurant.id)
-                .all()
+            db.add_all(
+                [
+                    MenuItem(name=item_name, price=item_price, restaurant_id=restaurant.id)
+                    for item_name, item_price in items
+                ]
             )
-            linked_ids = [item.id for item in linked_items]
-            print(
-                f"Restaurant id={restaurant.id} name={restaurant.name} "
-                f"linked_menu_item_ids={linked_ids}"
-            )
+            print(f"Added menu items for {name}")
 
         db.commit()
-        print("\n--- Success! Database Seeded ---")
+        print("\n--- Success! Database Fully Seeded ---")
 
     except Exception as e:
         db.rollback()
-        print("\n--- SEEDING FAILED ---")
-        print(f"Error Type: {type(e).__name__}")
-        print(f"Error Message: {e}")
+        print(f"\n--- SEEDING FAILED: {e} ---")
         traceback.print_exc()
     finally:
         db.close()
-
 
 if __name__ == "__main__":
     seed()

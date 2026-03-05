@@ -8,6 +8,7 @@ import CheckoutDrawer from "../components/CheckoutDrawer";
 const Menu = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { id } = useParams();
+  const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,12 +19,13 @@ const Menu = () => {
     const fetchMenu = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/restaurants/${id}/menu`);
+        const response = await axios.get(`/api/restaurants/${id}`);
+        const restaurantData = response.data;
+        setRestaurant(restaurantData);
 
-        // Injection Logic: Add the restaurant_id to every item
-        const itemsWithRestaurantId = response.data.map((item) => ({
+        const itemsWithRestaurantId = (restaurantData.menu_items || []).map((item) => ({
           ...item,
-          restaurant_id: parseInt(id), // Ensure it's a number
+          restaurant_id: parseInt(id, 10),
         }));
 
         setMenuItems(itemsWithRestaurantId);
@@ -51,7 +53,7 @@ const Menu = () => {
     <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen font-sans pb-32">
       <header className="mb-12 border-b pb-8">
         <h1 className="text-4xl font-bold text-slate-900 mb-2">
-          Restaurant Menu
+          {restaurant?.name || "Restaurant Menu"}
         </h1>
         <p className="text-slate-500 font-light">
           Freshly prepared and ready to order.

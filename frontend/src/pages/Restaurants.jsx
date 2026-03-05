@@ -51,12 +51,7 @@ function Restaurants() {
               Select a restaurant to view its menu
             </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-6 py-2 border border-slate-200 bg-white rounded-full hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all duration-200 text-slate-600 font-medium shadow-sm"
-          >
-            Logout
-          </button>
+        
         </div>
 
         {error && (

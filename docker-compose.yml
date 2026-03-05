@@ -5,7 +5,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: food_market
     ports:
       - "5432:5432"
@@ -24,7 +24,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:secretpassword@db:5432/food_market
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/food_market
     depends_on:
       db:
         condition: service_healthy

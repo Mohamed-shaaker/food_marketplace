@@ -7,12 +7,17 @@ import {
 import Login from "./pages/Login";
 import Restaurants from "./pages/Restaurants";
 import Menu from "./pages/Menu";
+import MyOrders from "./pages/MyOrders"; 
 import OrderStatus from "./components/OrderStatus";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Navbar from "./components/Navbar"; // 1. Added Navbar Import
 
 function App() {
   return (
     <Router>
+      {/* 2. Place Navbar here so it shows on all pages */}
+      <Navbar /> 
+      
       <Routes>
         {/* Public Login Page */}
         <Route path="/login" element={<Login />} />
@@ -37,12 +42,22 @@ function App() {
           }
         />
 
-        {/* NEW: Protected Order Status Confirmation Page */}
+        {/* Protected Order Status Confirmation Page */}
         <Route
           path="/order-status/:id"
           element={
             <ProtectedRoute>
               <OrderStatus />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected User Order History Page */}
+        <Route
+          path="/my-orders"
+          element={
+            <ProtectedRoute>
+              <MyOrders />
             </ProtectedRoute>
           }
         />
