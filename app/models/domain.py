@@ -8,12 +8,15 @@ Base = declarative_base()
 class UserRole(str, PyEnum):
     CUSTOMER = "customer"
     RESTAURANT = "restaurant"
+    OWNER = "restaurant"
+    DRIVER = "driver"
     ADMIN = "admin"
 
 class OrderStatus(str, PyEnum):
     PENDING = "PENDING"
     PAID = "PAID"
     PREPARING = "PREPARING"
+    OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY"
     DELIVERED = "DELIVERED"
     CANCELLED = "CANCELLED"
 
@@ -25,6 +28,19 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.CUSTOMER)
     wallet = relationship("Wallet", back_populates="user", uselist=False)
     restaurants = relationship("Restaurant", back_populates="owner")
+    driver_profile = relationship("Driver", back_populates="user", uselist=False)
+
+
+class Driver(Base):
+    __tablename__ = "drivers"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    is_online = Column(Boolean, default=False, nullable=False)
+    vehicle_type = Column(String, nullable=True)
+    current_lat = Column(Float, nullable=True)
+    current_lng = Column(Float, nullable=True)
+    last_seen = Column(DateTime, nullable=True)
+    user = relationship("User", back_populates="driver_profile")
 
 class Restaurant(Base):
     __tablename__ = "restaurants"
@@ -49,15 +65,19 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"))
+    idempotency_key = Column(String, unique=True, nullable=True)
     
-    # NEW: Added driver_id and payment_status from your implementation plan
-    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True) 
+    driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=True)
     payment_status = Column(String, default="pending") # e.g., pending, completed, failed
+    delivery_fee = Column(Float, default=2.0)
+    restaurant_accepted_at = Column(DateTime, nullable=True)
+    ready_for_pickup_at = Column(DateTime, nullable=True)
     
     # Financial snapshots (Strict Logic)
-    total_amount = Column(Float, nullable=False)      # What customer pays
-    commission_amount = Column(Float, nullable=False) # 10% Platform fee
-    payout_amount = Column(Float, nullable=False)     # What restaurant gets
+    total_amount = Column(Float, nullable=False)         # Item subtotal
+    platform_fee = Column(Float, default=1.50, nullable=False)
+    commission_amount = Column(Float, nullable=False)
+    restaurant_payout = Column(Float, nullable=False)
     
     status = Column(
         Enum(OrderStatus, name="orderstatus", create_type=False),
@@ -65,6 +85,27 @@ class Order(Base):
     )
     created_at = Column(DateTime, default=datetime.utcnow)
     items = relationship("OrderItem", back_populates="order")
+    payment_transactions = relationship(
+        "PaymentTransaction",
+        back_populates="order",
+        order_by="PaymentTransaction.created_at",
+    )
+
+    @property
+    def payment_reference(self):
+        if not self.payment_transactions:
+            return None
+        return self.payment_transactions[-1].payment_reference
+
+
+class PaymentTransaction(Base):
+    __tablename__ = "payment_transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    payment_reference = Column(String, unique=True, nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
+    status = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    order = relationship("Order", back_populates="payment_transactions")
 class OrderItem(Base):
     __tablename__ = "order_items"
     id = Column(Integer, primary_key=True, index=True)

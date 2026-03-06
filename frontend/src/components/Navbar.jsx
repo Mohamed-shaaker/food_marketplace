@@ -1,25 +1,48 @@
-import React from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import api from "../api/axios";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [role, setRole] = useState("");
 
-  // 1. Move the check inside the function body
-  if (location.pathname === '/login') {
-    return null;
-  }
+  useEffect(() => {
+    const loadRole = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setRole("");
+          return;
+        }
+
+        const response = await api.get("/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setRole(response.data.role);
+      } catch {
+        setRole("");
+      }
+    };
+
+    loadRole();
+  }, [location.pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); 
-    navigate('/login');
+    localStorage.removeItem("token");
+    setRole("");
+    navigate("/login");
   };
+
+  if (location.pathname === "/login") {
+    return null;
+  }
 
   return (
     <nav className="flex items-center justify-between p-4 bg-white shadow-sm border-b">
       {/* Logo / Home Link */}
-      <div 
-        className="flex items-center gap-2 cursor-pointer" 
+      <div
+        className="flex items-center gap-2 cursor-pointer"
         onClick={() => navigate('/')}
       >
         <span className="text-2xl">🍕</span>
@@ -34,6 +57,33 @@ const Navbar = () => {
         >
           My Orders
         </Link>
+
+        {role === "restaurant" && (
+          <Link
+            to="/restaurant-dashboard"
+            className="text-slate-600 hover:text-orange-600 font-medium transition-colors"
+          >
+            Restaurant Dashboard
+          </Link>
+        )}
+
+        {role === "driver" && (
+          <Link
+            to="/driver-dashboard"
+            className="text-slate-600 hover:text-orange-600 font-medium transition-colors"
+          >
+            Driver Dashboard
+          </Link>
+        )}
+
+        {role === "admin" && (
+          <Link
+            to="/admin"
+            className="text-slate-600 hover:text-orange-600 font-medium transition-colors"
+          >
+            Admin Panel
+          </Link>
+        )}
 
         <button 
           onClick={handleLogout}

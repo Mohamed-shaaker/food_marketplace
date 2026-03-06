@@ -8,6 +8,9 @@ import Login from "./pages/Login";
 import Restaurants from "./pages/Restaurants";
 import Menu from "./pages/Menu";
 import MyOrders from "./pages/MyOrders"; 
+import RestaurantDashboard from "./pages/RestaurantDashboard";
+import DriverDashboard from "./pages/DriverDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import OrderStatus from "./components/OrderStatus";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar"; // 1. Added Navbar Import
@@ -58,6 +61,33 @@ function App() {
           element={
             <ProtectedRoute>
               <MyOrders />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/restaurant-dashboard"
+          element={
+            <ProtectedRoute>
+              <RestaurantDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/driver-dashboard"
+          element={
+            <ProtectedRoute>
+              <DriverDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />

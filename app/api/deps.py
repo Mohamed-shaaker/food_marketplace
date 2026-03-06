@@ -37,3 +37,21 @@ def require_role(allowed_roles: list[UserRole]):
             raise HTTPException(status_code=403, detail="Operation not permitted")
         return current_user
     return role_checker
+
+
+def require_owner(current_user: User = Depends(get_current_user)):
+    if current_user.role not in [UserRole.OWNER, UserRole.RESTAURANT]:
+        raise HTTPException(status_code=403, detail="Owner role required")
+    return current_user
+
+
+def require_driver(current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.DRIVER:
+        raise HTTPException(status_code=403, detail="Driver role required")
+    return current_user
+
+
+def require_admin(current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return current_user

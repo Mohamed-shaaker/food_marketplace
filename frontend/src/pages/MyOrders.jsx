@@ -5,9 +5,34 @@ import { useNavigate } from "react-router-dom";
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState("");
   const navigate = useNavigate();
 
-  // --- Step 2: Payment Lifecycle Logic ---
+  const fetchOrders = async (currentOrders = []) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/orders/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const nextOrders = response.data;
+
+      const previousById = new Map(currentOrders.map((order) => [order.id, order]));
+      for (const order of nextOrders) {
+        const previous = previousById.get(order.id);
+        if (previous?.status === "PENDING" && order.status === "PAID") {
+          setToastMessage(`Payment Successful for Order #${order.id}`);
+          break;
+        }
+      }
+
+      setOrders(nextOrders);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePay = async (e, orderId) => {
     e.stopPropagation(); // Prevents navigating to order details when clicking the button
     try {
@@ -15,14 +40,7 @@ const MyOrders = () => {
       await axios.post(`/api/orders/${orderId}/confirm-payment`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
-      // Refresh the list to reflect the new "PAID" status
-      const updatedOrders = orders.map(order => 
-        order.id === orderId ? { ...order, status: "PAID" } : order
-      );
-      setOrders(updatedOrders);
-      
-      alert("Payment Successful!");
+      await fetchOrders(orders);
     } catch (err) {
       console.error("Payment failed:", err);
       alert("Payment failed. Please try again.");
@@ -30,21 +48,25 @@ const MyOrders = () => {
   };
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get("/api/orders/my", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setOrders(response.data);
-      } catch (err) {
-        console.error("Error fetching orders:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOrders();
+    fetchOrders([]);
   }, []);
+
+  useEffect(() => {
+    const hasPendingOrder = orders.some((order) => order.status === "PENDING");
+    if (!hasPendingOrder) return;
+
+    const intervalId = window.setInterval(() => {
+      fetchOrders(orders);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [orders]);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timeoutId = window.setTimeout(() => setToastMessage(""), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
 
   if (loading)
     return (
@@ -55,6 +77,12 @@ const MyOrders = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 mt-10">
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50 bg-green-600 text-white px-4 py-3 rounded-xl shadow-lg">
+          {toastMessage}
+        </div>
+      )}
+
       <h1 className="text-3xl font-bold text-slate-900 mb-8">
         My Order History
       </h1>
@@ -80,6 +108,9 @@ const MyOrders = () => {
                 </h3>
                 <p className="text-slate-500 text-sm">
                   {new Date(order.created_at).toLocaleDateString()}
+                </p>
+                <p className="text-slate-500 text-xs mt-1">
+                  Transaction ID: {order.payment_reference || "Pending"}
                 </p>
               </div>
 

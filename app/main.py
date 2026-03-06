@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # <-- NEW: Import this
-from app.api import auth, orders, webhooks, restaurants
+from app.api import admin_ops, auth, driver_ops, orders, payments, restaurant_ops, restaurants, webhooks
 from app.core.config import settings
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -26,6 +26,10 @@ app.add_middleware(
 # Include the routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(orders.router, prefix="/api/orders", tags=["Orders"])
+app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(admin_ops.router, prefix="/api/admin", tags=["AdminOps"])
+app.include_router(restaurant_ops.router, prefix="/api/restaurant-ops", tags=["RestaurantOps"])
+app.include_router(driver_ops.router, prefix="/api/driver-ops", tags=["DriverOps"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(restaurants.router, prefix="/api/restaurants", tags=["Restaurants"])
 

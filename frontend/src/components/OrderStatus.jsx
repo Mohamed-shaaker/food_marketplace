@@ -21,7 +21,13 @@ const OrderStatus = () => {
         console.error(err);
       }
     };
+
     fetchOrderStatus();
+    const intervalId = window.setInterval(() => {
+      fetchOrderStatus();
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
   }, [id]);
 
   if (error)

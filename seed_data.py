@@ -7,7 +7,7 @@ sys.path.append("/app")
 
 from app.core.database import SessionLocal
 from app.core.security import get_password_hash
-from app.models.domain import MenuItem, Restaurant, User, UserRole, Wallet
+from app.models.domain import Driver, MenuItem, Order, OrderItem, PaymentTransaction, Restaurant, Transaction, User, UserRole, Wallet
 
 
 def seed() -> None:
@@ -19,6 +19,26 @@ def seed() -> None:
         existing_owner = db.query(User).filter(User.email == owner_email).first()
         if existing_owner:
             print(f"Deleting existing owner: {owner_email}")
+            owner_restaurant_ids = [
+                r.id for r in db.query(Restaurant.id).filter(Restaurant.owner_id == existing_owner.id).all()
+            ]
+            if owner_restaurant_ids:
+                owner_order_ids = [
+                    o.id
+                    for o in db.query(Order.id)
+                    .filter(Order.restaurant_id.in_(owner_restaurant_ids))
+                    .all()
+                ]
+                if owner_order_ids:
+                    db.query(PaymentTransaction).filter(
+                        PaymentTransaction.order_id.in_(owner_order_ids)
+                    ).delete(synchronize_session=False)
+                    db.query(OrderItem).filter(OrderItem.order_id.in_(owner_order_ids)).delete(
+                        synchronize_session=False
+                    )
+                    db.query(Order).filter(Order.id.in_(owner_order_ids)).delete(
+                        synchronize_session=False
+                    )
             db.query(MenuItem).filter(
                 MenuItem.restaurant_id.in_(
                     db.query(Restaurant.id).filter(Restaurant.owner_id == existing_owner.id)
@@ -27,6 +47,13 @@ def seed() -> None:
             db.query(Restaurant).filter(Restaurant.owner_id == existing_owner.id).delete(
                 synchronize_session=False
             )
+            owner_wallet_ids = [
+                w.id for w in db.query(Wallet.id).filter(Wallet.user_id == existing_owner.id).all()
+            ]
+            if owner_wallet_ids:
+                db.query(Transaction).filter(Transaction.wallet_id.in_(owner_wallet_ids)).delete(
+                    synchronize_session=False
+                )
             db.query(Wallet).filter(Wallet.user_id == existing_owner.id).delete(
                 synchronize_session=False
             )
@@ -41,6 +68,57 @@ def seed() -> None:
         db.add(owner)
         db.flush()
         db.add(Wallet(user_id=owner.id, balance=0.0))
+
+        driver_email = "driver@fleet.com"
+        existing_driver = db.query(User).filter(User.email == driver_email).first()
+        if existing_driver:
+            print(f"Deleting existing driver: {driver_email}")
+            db.query(Order).filter(Order.driver_id.in_(db.query(Driver.id).filter(Driver.user_id == existing_driver.id))).update(
+                {Order.driver_id: None},
+                synchronize_session=False,
+            )
+            db.query(Driver).filter(Driver.user_id == existing_driver.id).delete(synchronize_session=False)
+            driver_wallet_ids = [
+                w.id for w in db.query(Wallet.id).filter(Wallet.user_id == existing_driver.id).all()
+            ]
+            if driver_wallet_ids:
+                db.query(Transaction).filter(Transaction.wallet_id.in_(driver_wallet_ids)).delete(
+                    synchronize_session=False
+                )
+            db.query(Wallet).filter(Wallet.user_id == existing_driver.id).delete(synchronize_session=False)
+            db.delete(existing_driver)
+            db.flush()
+
+        driver_user = User(
+            email=driver_email,
+            hashed_password=get_password_hash("password123"),
+            role=UserRole.DRIVER,
+        )
+        db.add(driver_user)
+        db.flush()
+        db.add(Wallet(user_id=driver_user.id, balance=0.0))
+        db.add(Driver(user_id=driver_user.id, is_online=True, vehicle_type="motorbike"))
+        print("Created test driver profile: driver@fleet.com / password123")
+
+        admin_email = "admin@marketplace.com"
+        admin_user = db.query(User).filter(User.email == admin_email).first()
+        if not admin_user:
+            admin_user = User(
+                email=admin_email,
+                hashed_password=get_password_hash("admin123"),
+                role=UserRole.ADMIN,
+            )
+            db.add(admin_user)
+            db.flush()
+            db.add(Wallet(user_id=admin_user.id, balance=0.0))
+            print("Created admin profile: admin@marketplace.com / admin123")
+        else:
+            admin_user.hashed_password = get_password_hash("admin123")
+            admin_user.role = UserRole.ADMIN
+            existing_wallet = db.query(Wallet).filter(Wallet.user_id == admin_user.id).first()
+            if not existing_wallet:
+                db.add(Wallet(user_id=admin_user.id, balance=0.0))
+            print("Updated admin profile credentials: admin@marketplace.com / admin123")
 
         restaurants_to_add = [
             (

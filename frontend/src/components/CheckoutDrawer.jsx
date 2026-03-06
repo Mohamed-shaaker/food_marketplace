@@ -15,7 +15,8 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
 
     setIsSubmitting(true);
     try {
-      // 1. Retrieve the token from localStorage
+      const idempotencyKey =
+        window.crypto?.randomUUID?.() ?? `fallback-${Date.now()}`;
       const token = localStorage.getItem("token");
 
       const payload = {
@@ -30,10 +31,11 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
       const response = await axios.post("/api/orders/", payload, {
         headers: {
           Authorization: `Bearer ${token}`, // This fixes the 403 error
+          "Idempotency-Key": idempotencyKey,
         },
       });
 
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         const orderId = response.data.id;
         clearCart();
         onClose();
