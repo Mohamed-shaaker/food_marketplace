@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime
@@ -38,16 +39,16 @@ class OrderOut(BaseModel):
     restaurant_accepted_at: Optional[datetime] = None
     ready_for_pickup_at: Optional[datetime] = None
     payment_reference: Optional[str] = None
-    total_amount: float
-    platform_fee: float
-    commission_amount: float
-    restaurant_payout: float
+    total_amount: Decimal
+    platform_fee: Decimal
+    commission_amount: Decimal
+    restaurant_payout: Decimal
     created_at: datetime  # Added for history sorting
     
     model_config = {"from_attributes": True}  
 
 class WalletResponse(BaseModel):
-    balance: float
+    balance: Decimal
 
 
 class DriverStatusUpdate(BaseModel):
@@ -73,13 +74,13 @@ class DriverProfileOut(BaseModel):
 class RecentDeliveryOut(BaseModel):
     order_id: int
     restaurant_name: str
-    platform_cut: float
+    platform_cut: Decimal
     delivered_at: datetime
 
 
 class AdminStatsOut(BaseModel):
-    gross_sales: float
-    platform_profit: float
+    gross_sales: Decimal
+    platform_profit: Decimal
     total_deliveries: int
     recent_deliveries: List[RecentDeliveryOut]
 
@@ -87,7 +88,7 @@ class AdminStatsOut(BaseModel):
 class MenuItemOut(BaseModel):
     id: int
     name: str
-    price: float
+    price: Decimal
     model_config = {"from_attributes": True}
 
 class RestaurantOut(BaseModel):

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -17,17 +19,17 @@ def get_admin_stats(
     delivered_filter = Order.status == OrderStatus.DELIVERED
 
     gross_sales = (
-        db.query(func.coalesce(func.sum(Order.total_amount), 0.0))
+        db.query(func.coalesce(func.sum(Order.total_amount), Decimal("0.00")))
         .filter(delivered_filter)
         .scalar()
     )
     total_platform_fees = (
-        db.query(func.coalesce(func.sum(Order.platform_fee), 0.0))
+        db.query(func.coalesce(func.sum(Order.platform_fee), Decimal("0.00")))
         .filter(delivered_filter)
         .scalar()
     )
     total_commission = (
-        db.query(func.coalesce(func.sum(Order.commission_amount), 0.0))
+        db.query(func.coalesce(func.sum(Order.commission_amount), Decimal("0.00")))
         .filter(delivered_filter)
         .scalar()
     )
@@ -50,15 +52,15 @@ def get_admin_stats(
         RecentDeliveryOut(
             order_id=order.id,
             restaurant_name=restaurant_name,
-            platform_cut=float(order.platform_fee + order.commission_amount),
+            platform_cut=order.platform_fee + order.commission_amount,
             delivered_at=order.created_at,
         )
         for order, restaurant_name in rows
     ]
 
     return AdminStatsOut(
-        gross_sales=float(gross_sales),
-        platform_profit=float(total_platform_fees + total_commission),
+        gross_sales=gross_sales,
+        platform_profit=total_platform_fees + total_commission,
         total_deliveries=int(total_deliveries),
         recent_deliveries=recent_deliveries,
     )

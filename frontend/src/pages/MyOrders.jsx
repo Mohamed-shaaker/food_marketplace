@@ -6,21 +6,25 @@ const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [processingOrderId, setProcessingOrderId] = useState(null);
+  const [phoneNumbers, setPhoneNumbers] = useState({});
+  const [pendingPollingIds, setPendingPollingIds] = useState([]);
   const navigate = useNavigate();
 
   const fetchOrders = async (currentOrders = []) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/orders/my", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get("/api/orders/my");
       const nextOrders = response.data;
 
-      const previousById = new Map(currentOrders.map((order) => [order.id, order]));
+      const previousById = new Map(
+        currentOrders.map((order) => [order.id, order]),
+      );
       for (const order of nextOrders) {
         const previous = previousById.get(order.id);
         if (previous?.status === "PENDING" && order.status === "PAID") {
           setToastMessage(`Payment Successful for Order #${order.id}`);
+          setPendingPollingIds((ids) => ids.filter((id) => id !== order.id));
           break;
         }
       }
@@ -34,16 +38,35 @@ const MyOrders = () => {
   };
 
   const handlePay = async (e, orderId) => {
-    e.stopPropagation(); // Prevents navigating to order details when clicking the button
+    e.stopPropagation();
+    const phoneNumber = phoneNumbers[orderId]?.trim();
+    if (!phoneNumber) {
+      setErrorMessage("Enter a Uganda mobile money number before paying.");
+      return;
+    }
+
+    setProcessingOrderId(orderId);
+    setErrorMessage("");
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(`/api/orders/${orderId}/confirm-payment`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await axios.post("/api/payments/initiate", {
+        order_id: orderId,
+        phone_number: phoneNumber,
       });
+      setToastMessage(
+        response.data.message ||
+          "Please check your phone for the Mobile Money PIN prompt.",
+      );
+      setPendingPollingIds((ids) =>
+        ids.includes(orderId) ? ids : [...ids, orderId],
+      );
       await fetchOrders(orders);
     } catch (err) {
       console.error("Payment failed:", err);
-      alert("Payment failed. Please try again.");
+      setErrorMessage(
+        err.response?.data?.detail || "Payment failed. Please try again.",
+      );
+    } finally {
+      setProcessingOrderId(null);
     }
   };
 
@@ -52,15 +75,14 @@ const MyOrders = () => {
   }, []);
 
   useEffect(() => {
-    const hasPendingOrder = orders.some((order) => order.status === "PENDING");
-    if (!hasPendingOrder) return;
+    if (pendingPollingIds.length === 0) return;
 
     const intervalId = window.setInterval(() => {
       fetchOrders(orders);
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [orders]);
+  }, [orders, pendingPollingIds]);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -80,6 +102,11 @@ const MyOrders = () => {
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 bg-green-600 text-white px-4 py-3 rounded-xl shadow-lg">
           {toastMessage}
+        </div>
+      )}
+      {errorMessage && (
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-red-600">
+          {errorMessage}
         </div>
       )}
 
@@ -116,9 +143,9 @@ const MyOrders = () => {
 
               <div className="text-right flex flex-col items-end gap-2">
                 <p className="text-xl font-black text-slate-900">
-                  ${order.total_amount.toFixed(2)}
+                  {Number(order.total_amount).toLocaleString()} UGX
                 </p>
-                
+
                 <div className="flex items-center gap-2">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -132,12 +159,33 @@ const MyOrders = () => {
 
                   {/* --- PAY NOW BUTTON --- */}
                   {order.status === "PENDING" && (
-                    <button 
-                      onClick={(e) => handlePay(e, order.id)}
-                      className="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-full hover:bg-indigo-700 transition-colors shadow-sm"
+                    <div
+                      className="flex items-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      Pay Now
-                    </button>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="07XXXXXXXX"
+                        value={phoneNumbers[order.id] || ""}
+                        onChange={(e) =>
+                          setPhoneNumbers((current) => ({
+                            ...current,
+                            [order.id]: e.target.value,
+                          }))
+                        }
+                        className="w-32 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+                      />
+                      <button
+                        onClick={(e) => handlePay(e, order.id)}
+                        disabled={processingOrderId === order.id}
+                        className="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-full hover:bg-indigo-700 transition-colors shadow-sm disabled:cursor-not-allowed disabled:bg-indigo-300"
+                      >
+                        {processingOrderId === order.id
+                          ? "Processing..."
+                          : "Pay Now"}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

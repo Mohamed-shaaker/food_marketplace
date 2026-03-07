@@ -36,9 +36,9 @@ def accept_order(
         raise HTTPException(status_code=409, detail="Only PAID orders can be accepted")
 
     try:
-        transition_order_status(order, OrderStatus.PREPARING)
+        transition_order_status(db, order, OrderStatus.PREPARING, changed_by_user_id=current_owner.id)
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
     order.restaurant_accepted_at = datetime.utcnow()
     db.commit()
@@ -61,7 +61,7 @@ def list_owner_orders(
         db.query(Order)
         .filter(
             Order.restaurant_id.in_(restaurant_ids),
-            Order.status.in_([OrderStatus.PAID, OrderStatus.PREPARING]),
+            Order.status.in_([OrderStatus.PAID, OrderStatus.PREPARING, OrderStatus.READY]),
         )
         .order_by(Order.created_at.desc())
         .all()
@@ -77,7 +77,12 @@ def mark_ready_for_pickup(
     order = _get_owned_order(db, order_id, current_owner)
 
     if order.status != OrderStatus.PREPARING:
-        raise HTTPException(status_code=409, detail="Only PREPARING orders can be marked ready")
+        raise HTTPException(status_code=400, detail="Only PREPARING orders can be marked ready")
+
+    try:
+        transition_order_status(db, order, OrderStatus.READY, changed_by_user_id=current_owner.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     order.ready_for_pickup_at = datetime.utcnow()
     db.commit()

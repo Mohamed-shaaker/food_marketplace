@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -43,7 +45,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.flush()
 
     # 5. Stage the Wallet using the now-known user id — still in the same transaction
-    new_wallet = Wallet(user_id=db_user.id, balance=0.0)
+    new_wallet = Wallet(user_id=db_user.id, balance=Decimal("0.00"))
     db.add(new_wallet)
 
     # 6. ONE commit — writes User + Wallet atomically.

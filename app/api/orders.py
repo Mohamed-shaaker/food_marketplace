@@ -62,8 +62,16 @@ def get_my_orders(db: Session = Depends(get_db), current_user = Depends(get_curr
     )
 
 @router.post("/{order_id}/confirm-payment")
-def confirm_payment(order_id: int, db: Session = Depends(get_db)):
-    order = db.query(Order).filter(Order.id == order_id).first()
+def confirm_payment(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    order = (
+        db.query(Order)
+        .filter(Order.id == order_id, Order.user_id == current_user.id)
+        .first()
+    )
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
@@ -71,9 +79,9 @@ def confirm_payment(order_id: int, db: Session = Depends(get_db)):
         return {"status": "already_paid"}
 
     try:
-        transition_order_status(order, OrderStatus.PAID)
+        transition_order_status(db, order, OrderStatus.PAID)
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
     order.payment_status = "completed"
     db.commit()

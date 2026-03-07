@@ -17,7 +17,6 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
     try {
       const idempotencyKey =
         window.crypto?.randomUUID?.() ?? `fallback-${Date.now()}`;
-      const token = localStorage.getItem("token");
 
       const payload = {
         restaurant_id: cartItems[0].restaurant_id,
@@ -30,7 +29,6 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
       // 2. Send to backend with the Authorization Header
       const response = await axios.post("/api/orders/", payload, {
         headers: {
-          Authorization: `Bearer ${token}`, // This fixes the 403 error
           "Idempotency-Key": idempotencyKey,
         },
       });
@@ -81,7 +79,7 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
               <div className="flex-1">
                 <h4 className="font-semibold text-slate-800">{item.name}</h4>
                 <p className="text-slate-500 text-sm">
-                  ${item.price.toFixed(2)} each
+                  {Number(item.price).toLocaleString()} UGX each
                 </p>
               </div>
 
@@ -111,7 +109,7 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
         <div className="border-t pt-6">
           <div className="flex justify-between text-xl font-bold mb-6">
             <span>Total</span>
-            <span>${cartTotal.toFixed(2)}</span>
+            <span>{Number(cartTotal).toLocaleString()} UGX</span>
           </div>
 
           <button

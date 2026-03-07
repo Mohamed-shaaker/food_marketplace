@@ -8,13 +8,12 @@ const RestaurantDashboard = () => {
 
   const loadOrders = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await api.get("/api/restaurant-ops/orders", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/api/restaurant-ops/orders");
       setOrders(response.data);
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to load restaurant orders.");
+      setError(
+        err.response?.data?.detail || "Failed to load restaurant orders.",
+      );
     } finally {
       setLoading(false);
     }
@@ -26,10 +25,7 @@ const RestaurantDashboard = () => {
 
   const updateOrder = async (orderId, action) => {
     try {
-      const token = localStorage.getItem("token");
-      await api.post(`/api/restaurant-ops/orders/${orderId}/${action}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.post(`/api/restaurant-ops/orders/${orderId}/${action}`, {});
       await loadOrders();
     } catch (err) {
       setError(err.response?.data?.detail || `Failed to ${action} order.`);
@@ -37,15 +33,25 @@ const RestaurantDashboard = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-500">Loading dashboard...</div>;
+    return (
+      <div className="p-8 text-center text-slate-500">Loading dashboard...</div>
+    );
   }
 
   return (
     <div className="max-w-5xl mx-auto p-6">
-      <h1 className="text-3xl font-bold text-slate-900 mb-6">Restaurant Dashboard</h1>
-      {error && <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-600">{error}</div>}
+      <h1 className="text-3xl font-bold text-slate-900 mb-6">
+        Restaurant Dashboard
+      </h1>
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-600">
+          {error}
+        </div>
+      )}
       {orders.length === 0 ? (
-        <div className="p-6 rounded-xl bg-slate-50 text-slate-500">No PAID/PREPARING orders.</div>
+        <div className="p-6 rounded-xl bg-slate-50 text-slate-500">
+          No PAID/PREPARING orders.
+        </div>
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
@@ -54,9 +60,15 @@ const RestaurantDashboard = () => {
               className="p-5 rounded-2xl border border-slate-200 bg-white flex items-center justify-between"
             >
               <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">Order #{order.id}</p>
-                <p className="text-slate-700 font-semibold">Status: {order.status}</p>
-                <p className="text-slate-500 text-sm">Subtotal: ${order.total_amount.toFixed(2)}</p>
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Order #{order.id}
+                </p>
+                <p className="text-slate-700 font-semibold">
+                  Status: {order.status}
+                </p>
+                <p className="text-slate-500 text-sm">
+                  Subtotal: {Number(order.total_amount).toLocaleString()} UGX
+                </p>
               </div>
               <div className="flex gap-2">
                 {order.status === "PAID" && (

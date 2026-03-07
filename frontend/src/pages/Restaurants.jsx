@@ -41,7 +41,6 @@ function Restaurants() {
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-6xl mx-auto p-8 font-sans">
-        {/* Header Section */}
         <div className="flex justify-between items-center mb-12">
           <div>
             <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -51,7 +50,13 @@ function Restaurants() {
               Select a restaurant to view its menu
             </p>
           </div>
-        
+          {/* Fixed handleLogout button */}
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
+          >
+            Logout
+          </button>
         </div>
 
         {error && (
@@ -60,7 +65,6 @@ function Restaurants() {
           </div>
         )}
 
-        {/* Restaurant Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {restaurants.map((res) => (
             <div
@@ -68,7 +72,6 @@ function Restaurants() {
               onClick={() => navigate(`/restaurants/${res.id}`)}
               className="group cursor-pointer bg-white border border-slate-200/60 rounded-3xl overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 ease-out shadow-sm"
             >
-              {/* Visual Header: Using the image_url from your DB if it exists */}
               <div className="h-48 bg-slate-100 relative flex items-center justify-center overflow-hidden">
                 {res.image_url ? (
                   <img
@@ -81,21 +84,19 @@ function Restaurants() {
                     🥘
                   </span>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
 
               <div className="p-7">
                 <h2 className="text-2xl font-bold text-slate-800 group-hover:text-orange-600 transition-colors">
                   {res.name}
                 </h2>
-
                 <div className="flex items-center justify-between mt-6">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                     Premium Partner
                   </span>
                   <div className="flex flex-col items-end">
                     <span className="text-orange-600 font-bold bg-orange-50 px-4 py-1.5 rounded-full text-sm border border-orange-100 shadow-sm">
-                      {(res.commission_rate * 100).toFixed(0)}% Fee
+                      Fee: {(res.commission_rate * 100).toFixed(0)}%
                     </span>
                   </div>
                 </div>

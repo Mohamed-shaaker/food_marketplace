@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # <-- NEW: Import this
 from app.api import admin_ops, auth, driver_ops, orders, payments, restaurant_ops, restaurants, webhooks
 from app.core.config import settings
+from app.services.bootstrap import run_demo_bootstrap
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -32,6 +33,12 @@ app.include_router(restaurant_ops.router, prefix="/api/restaurant-ops", tags=["R
 app.include_router(driver_ops.router, prefix="/api/driver-ops", tags=["DriverOps"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(restaurants.router, prefix="/api/restaurants", tags=["Restaurants"])
+
+@app.on_event("startup")
+def bootstrap_demo_environment():
+    # Force it to run regardless of the "demo" setting for now
+    print("--- FORCING KAMPALA BOOTSTRAP ---")
+    run_demo_bootstrap()
 
 @app.get("/health")
 def health_check():

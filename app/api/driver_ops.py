@@ -55,7 +55,7 @@ def list_ready_orders(
         .filter(
             Order.ready_for_pickup_at.isnot(None),
             Order.driver_id.is_(None),
-            Order.status == OrderStatus.PREPARING,
+            Order.status == OrderStatus.READY,
         )
         .order_by(Order.ready_for_pickup_at.asc())
         .all()
@@ -80,20 +80,21 @@ def list_active_orders(
 
 
 @router.post("/orders/{order_id}/claim", response_model=OrderOut)
+@router.patch("/orders/{order_id}/claim", response_model=OrderOut)
 def claim_order(
     order_id: int,
     db: Session = Depends(get_db),
     current_driver: User = Depends(require_driver),
 ):
     driver = _get_driver_profile(db, current_driver, require_online=True)
-    order = db.query(Order).filter(Order.id == order_id).first()
+    order = db.query(Order).filter(Order.id == order_id).with_for_update().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
     if order.driver_id is not None:
         raise HTTPException(status_code=409, detail="Order already claimed")
-    if order.ready_for_pickup_at is None:
-        raise HTTPException(status_code=409, detail="Order is not ready for pickup")
+    if order.ready_for_pickup_at is None or order.status != OrderStatus.READY:
+        raise HTTPException(status_code=400, detail="Order is not in READY state")
 
     order.driver_id = driver.id
     db.commit()
@@ -117,9 +118,14 @@ def update_order_status(
         raise HTTPException(status_code=403, detail="Driver can only update claimed orders")
 
     try:
-        transition_order_status(order, OrderStatus(payload.status))
+        transition_order_status(
+            db,
+            order,
+            OrderStatus(payload.status),
+            changed_by_user_id=current_driver.id,
+        )
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
     db.commit()
     db.refresh(order)

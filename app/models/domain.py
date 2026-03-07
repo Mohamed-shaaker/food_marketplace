@@ -1,6 +1,7 @@
+from decimal import Decimal
 from enum import Enum as PyEnum
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Enum, Boolean
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Enum, Boolean, Numeric, JSON
 from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
@@ -16,6 +17,7 @@ class OrderStatus(str, PyEnum):
     PENDING = "PENDING"
     PAID = "PAID"
     PREPARING = "PREPARING"
+    READY = "READY"
     OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY"
     DELIVERED = "DELIVERED"
     CANCELLED = "CANCELLED"
@@ -57,7 +59,7 @@ class MenuItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"))
     name = Column(String, nullable=False)
-    price = Column(Float, nullable=False)
+    price = Column(Numeric(12, 2), nullable=False)
     restaurant = relationship("Restaurant", back_populates="menu_items")
 
 class Order(Base):
@@ -74,10 +76,10 @@ class Order(Base):
     ready_for_pickup_at = Column(DateTime, nullable=True)
     
     # Financial snapshots (Strict Logic)
-    total_amount = Column(Float, nullable=False)         # Item subtotal
-    platform_fee = Column(Float, default=1.50, nullable=False)
-    commission_amount = Column(Float, nullable=False)
-    restaurant_payout = Column(Float, nullable=False)
+    total_amount = Column(Numeric(12, 2), nullable=False)         # Item subtotal
+    platform_fee = Column(Numeric(12, 2), default=Decimal("1.50"), nullable=False)
+    commission_amount = Column(Numeric(12, 2), nullable=False)
+    restaurant_payout = Column(Numeric(12, 2), nullable=False)
     
     status = Column(
         Enum(OrderStatus, name="orderstatus", create_type=False),
@@ -89,6 +91,11 @@ class Order(Base):
         "PaymentTransaction",
         back_populates="order",
         order_by="PaymentTransaction.created_at",
+    )
+    status_history = relationship(
+        "OrderStatusHistory",
+        back_populates="order",
+        order_by="OrderStatusHistory.changed_at",
     )
 
     @property
@@ -102,24 +109,40 @@ class PaymentTransaction(Base):
     __tablename__ = "payment_transactions"
     id = Column(Integer, primary_key=True, index=True)
     payment_reference = Column(String, unique=True, nullable=False, index=True)
+    provider_reference = Column(String, unique=True, nullable=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
     status = Column(String, nullable=False)
+    verified_amount = Column(Numeric(12, 2), nullable=True)
+    raw_response = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     order = relationship("Order", back_populates="payment_transactions")
+
+
+class OrderStatusHistory(Base):
+    __tablename__ = "order_status_history"
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
+    from_status = Column(String, nullable=True)
+    to_status = Column(String, nullable=False)
+    changed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    changed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    order = relationship("Order", back_populates="status_history")
+
+
 class OrderItem(Base):
     __tablename__ = "order_items"
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"))
     menu_item_id = Column(Integer, ForeignKey("menu_items.id"))
     quantity = Column(Integer, nullable=False)
-    price_at_time = Column(Float, nullable=False)
+    price_at_time = Column(Numeric(12, 2), nullable=False)
     order = relationship("Order", back_populates="items")
 
 class Wallet(Base):
     __tablename__ = "wallets"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True)
-    balance = Column(Float, default=0.0)
+    balance = Column(Numeric(12, 2), default=Decimal("0.00"))
     user = relationship("User", back_populates="wallet")
     transactions = relationship("Transaction", back_populates="wallet")
 
@@ -127,7 +150,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
     id = Column(Integer, primary_key=True, index=True)
     wallet_id = Column(Integer, ForeignKey("wallets.id"))
-    amount = Column(Float, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
     transaction_type = Column(String) # 'credit' or 'debit'
     reference_id = Column(String) # e.g., "order_123"
     created_at = Column(DateTime, default=datetime.utcnow)
