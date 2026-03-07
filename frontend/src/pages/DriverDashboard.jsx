@@ -181,7 +181,7 @@ const DriverDashboard = () => {
                   <p className="text-slate-500 text-sm">Delivery fee: ${order.delivery_fee.toFixed(2)}</p>
                 </div>
                 <div className="flex gap-2">
-                  {order.status === "PREPARING" && (
+                  {order.status === "READY" && (
                     <button
                       onClick={() => updateStatus(order.id, "OUT_FOR_DELIVERY")}
                       className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
