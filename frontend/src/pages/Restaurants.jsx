@@ -1,30 +1,34 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import api, { pingBackend } from "../api/axios";
 
 function Restaurants() {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [backendStatus, setBackendStatus] = useState("checking");
   const navigate = useNavigate();
 
   useEffect(() => {
+    pingBackend()
+      .then(() => {
+        setBackendStatus("reachable");
+      })
+      .catch(() => {
+        setBackendStatus("unreachable");
+      });
+
     api
       .get("/api/restaurants")
       .then((response) => {
         setRestaurants(response.data);
         setLoading(false);
       })
-      .catch((err) => {
+      .catch(() => {
         setError("Could not connect to the Backend.");
         setLoading(false);
       });
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
-  };
 
   if (loading)
     return (
@@ -50,18 +54,25 @@ function Restaurants() {
               Select a restaurant to view its menu
             </p>
           </div>
-          {/* Fixed handleLogout button */}
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
-          >
-            Logout
-          </button>
         </div>
 
         {error && (
           <div className="bg-red-50 border border-red-100 text-red-500 p-4 rounded-xl mb-8 text-center shadow-sm">
             {error}
+            <div className="mt-2 text-sm text-red-400">
+              Backend health: {backendStatus}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                pingBackend()
+                  .then(() => setBackendStatus("reachable"))
+                  .catch(() => setBackendStatus("unreachable"));
+              }}
+              className="mt-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-500 hover:bg-red-50"
+            >
+              Ping backend
+            </button>
           </div>
         )}
 

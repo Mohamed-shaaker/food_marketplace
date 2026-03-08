@@ -1,13 +1,20 @@
 import axios from "axios";
 
-// Create an instance of axios with a custom config
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+
 const api = axios.create({
-  baseURL: "http://localhost:8000", // Your FastAPI URL
+  baseURL: API_BASE_URL,
 });
 
 // REQUEST INTERCEPTOR: Automatically add JWT token to every request
 api.interceptors.request.use(
   (config) => {
+    if (config.skipAuth) {
+      delete config.headers.Authorization;
+      return config;
+    }
+
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -36,5 +43,9 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+export function pingBackend() {
+  return api.get("/health", { skipAuth: true });
+}
 
 export default api;

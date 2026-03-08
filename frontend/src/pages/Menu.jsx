@@ -23,10 +23,12 @@ const Menu = () => {
         const restaurantData = response.data;
         setRestaurant(restaurantData);
 
-        const itemsWithRestaurantId = (restaurantData.menu_items || []).map((item) => ({
-          ...item,
-          restaurant_id: parseInt(id, 10),
-        }));
+        const itemsWithRestaurantId = (restaurantData.menu_items || []).map(
+          (item) => ({
+            ...item,
+            restaurant_id: parseInt(id, 10),
+          }),
+        );
 
         setMenuItems(itemsWithRestaurantId);
       } catch (err) {
@@ -69,7 +71,7 @@ const Menu = () => {
             <div>
               <h3 className="text-xl font-bold text-slate-800">{item.name}</h3>
               <p className="text-orange-600 font-semibold mt-1">
-                ${item.price.toFixed(2)}
+                {Number(item.price).toLocaleString()} UGX
               </p>
             </div>
 

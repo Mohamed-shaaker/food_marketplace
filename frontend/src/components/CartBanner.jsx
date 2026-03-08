@@ -19,8 +19,9 @@ const CartBanner = ({ onOpenDrawer }) => {
           </span>
           <span className="text-lg font-semibold">View order</span>
         </div>
-
-        <span className="text-lg font-bold">${cartTotal.toFixed(2)}</span>
+        <span className="text-lg font-bold">
+          {Number(cartTotal).toLocaleString()} UGX
+        </span>{" "}
       </button>
     </div>
   );

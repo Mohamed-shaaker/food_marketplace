@@ -9,7 +9,6 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate(); // Add this
   if (!isOpen) return null;
-
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) return;
 
@@ -20,13 +19,14 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
 
       const payload = {
         restaurant_id: cartItems[0].restaurant_id,
+        // Ensure total_amount is included as a clean number for the Decimal backend
+        total_amount: Number(cartTotal.toFixed(2)),
         items: cartItems.map((item) => ({
           menu_item_id: item.id,
-          quantity: item.quantity,
+          quantity: parseInt(item.quantity), // Ensure this is an integer
         })),
       };
 
-      // 2. Send to backend with the Authorization Header
       const response = await axios.post("/api/orders/", payload, {
         headers: {
           "Idempotency-Key": idempotencyKey,
@@ -37,18 +37,18 @@ const CheckoutDrawer = ({ isOpen, onClose }) => {
         const orderId = response.data.id;
         clearCart();
         onClose();
-        // Objective: Order Confirmation via Redirect
         navigate(`/order-status/${orderId}`);
       }
     } catch (error) {
-      console.error("Order error:", error);
-      // Handle 403 specifically to guide the user
+      console.error("Order error details:", error.response?.data);
       if (error.response?.status === 403) {
-        alert("Session expired or unauthorized. Please log in again.");
+        alert("Session expired. Please log in again.");
       } else {
+        // This will now show the EXACT error from the backend (like "Validation Error")
         const errorMsg =
+          error.response?.data?.detail?.[0]?.msg ||
           error.response?.data?.detail ||
-          "Failed to place order. Please try again.";
+          "Failed to place order.";
         alert(errorMsg);
       }
     } finally {
