@@ -17,6 +17,7 @@ origins = [
     "http://localhost:5174",
     "http://127.0.0.1:5174",
     "https://tibibu-backend.onrender.com",
+    "https://tibibu-frontend.vercel.app",
 ]
 
 app.add_middleware(
