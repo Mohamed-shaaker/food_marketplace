@@ -23,6 +23,7 @@ const Login = () => {
 
       // 3. Send the request
       const response = await api.post("/api/auth/login", formData, {
+        skipAuth: true,
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
