@@ -1,10 +1,13 @@
+import logging
+
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware  # <-- NEW: Import this
+from fastapi.middleware.cors import CORSMiddleware
 from app.api import admin_ops, auth, driver_ops, orders, payments, restaurant_ops, restaurants, webhooks
 from app.core.config import settings
 from app.services.bootstrap import run_demo_bootstrap
 
 app = FastAPI(title=settings.PROJECT_NAME)
+logger = logging.getLogger(__name__)
 
 # --- CORS CONFIGURATION ---
 # This allows your React frontend (5173) to talk to this Backend (8000)
@@ -37,10 +40,26 @@ app.include_router(restaurants.router, prefix="/api/restaurants", tags=["Restaur
 
 @app.on_event("startup")
 def bootstrap_demo_environment():
-    # Force it to run regardless of the "demo" setting for now
-    print("--- FORCING KAMPALA BOOTSTRAP ---")
-    run_demo_bootstrap()
+    if not settings.RUN_DEMO_BOOTSTRAP:
+        logger.info("Skipping demo bootstrap because RUN_DEMO_BOOTSTRAP is disabled")
+        return
+
+    logger.info("Running demo bootstrap")
+    try:
+        run_demo_bootstrap()
+    except Exception:
+        logger.exception("Demo bootstrap failed during startup")
 
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/health/", include_in_schema=False)
+def health_check_slash():
+    return {"status": "healthy"}
+
+
+@app.get("/")
+def root():
+    return {"status": "ok", "service": settings.PROJECT_NAME}

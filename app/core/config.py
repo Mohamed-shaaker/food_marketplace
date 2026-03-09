@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Food Marketplace V1"
     ENV: str = "dev"
+    RUN_DEMO_BOOTSTRAP: bool = False
     DATABASE_URL: str
     SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
