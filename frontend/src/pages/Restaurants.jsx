@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Search, Star, Clock, AlertCircle } from "lucide-react";
 import api, { pingBackend } from "../api/axios";
 
 function Restaurants() {
   const [restaurants, setRestaurants] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [backendStatus, setBackendStatus] = useState("checking");
@@ -11,12 +13,8 @@ function Restaurants() {
 
   useEffect(() => {
     pingBackend()
-      .then(() => {
-        setBackendStatus("reachable");
-      })
-      .catch(() => {
-        setBackendStatus("unreachable");
-      });
+      .then(() => setBackendStatus("reachable"))
+      .catch(() => setBackendStatus("unreachable"));
 
     api
       .get("/api/restaurants")
@@ -30,85 +28,114 @@ function Restaurants() {
       });
   }, []);
 
+  const filteredRestaurants = restaurants.filter((res) =>
+    res.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading)
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex h-screen items-center justify-center bg-[#FAFAFA]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-          <p className="mt-4 text-slate-500 font-light">
-            Finding nearby kitchens...
-          </p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto"></div>
+          <p className="mt-4 text-gray-500 font-light">Loading restaurants...</p>
         </div>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
-      <div className="max-w-6xl mx-auto p-8 font-sans">
-        <div className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-              🍕 Food Marketplace
-            </h1>
-            <p className="text-slate-500 mt-2 font-light text-lg">
-              Select a restaurant to view its menu
-            </p>
+    <div className="min-h-screen bg-[#FAFAFA] pb-12">
+      {/* Sticky Top Header with Glassmorphism Search */}
+      <div className="sticky top-0 z-20 bg-[#FAFAFA]/80 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-6xl mx-auto p-4 md:px-8">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="w-full pl-11 pr-4 py-3 bg-gray-100/80 border-transparent rounded-2xl text-gray-900 placeholder-gray-500 focus:bg-white focus:border-gray-200 focus:ring-0 outline-none transition-all duration-300"
+              placeholder="What are you craving?"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto p-4 md:p-8 font-sans mt-4">
         {error && (
-          <div className="bg-red-50 border border-red-100 text-red-500 p-4 rounded-xl mb-8 text-center shadow-sm">
-            {error}
-            <div className="mt-2 text-sm text-red-400">
-              Backend health: {backendStatus}
+          <div className="bg-red-50 border border-red-100 text-red-500 p-4 rounded-xl mb-8 flex items-center shadow-sm">
+            <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+            <div>
+              <p className="font-semibold">{error}</p>
+              <p className="text-sm text-red-400 mt-1">Backend health: {backendStatus}</p>
             </div>
             <button
-              type="button"
-              onClick={() => {
-                pingBackend()
-                  .then(() => setBackendStatus("reachable"))
-                  .catch(() => setBackendStatus("unreachable"));
-              }}
-              className="mt-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-500 hover:bg-red-50"
+              onClick={() => window.location.reload()}
+              className="ml-auto rounded-lg border border-red-200 bg-white px-4 py-2 text-sm text-red-500 hover:bg-red-50"
             >
-              Ping backend
+              Retry
             </button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-          {restaurants.map((res) => (
+        {/* Empty State */}
+        {!loading && filteredRestaurants.length === 0 && !error && (
+          <div className="text-center py-20">
+            <div className="inline-block p-6 bg-gray-50 rounded-full mb-4">
+              <Search className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No results found</h3>
+            <p className="text-gray-500">We couldn't find any restaurants matching "{searchQuery}"</p>
+            <button
+              onClick={() => setSearchQuery("")}
+              className="mt-6 px-6 py-3 bg-black text-white rounded-2xl hover:bg-gray-800 transition-colors"
+            >
+              Clear Search
+            </button>
+          </div>
+        )}
+
+        {/* Deliveroo-Style Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredRestaurants.map((res) => (
             <div
               key={res.id}
               onClick={() => navigate(`/restaurants/${res.id}`)}
-              className="group cursor-pointer bg-white border border-slate-200/60 rounded-3xl overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 ease-out shadow-sm"
+              className="group cursor-pointer rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md active:scale-[0.98] transition-all duration-300 relative border border-gray-100/50"
             >
-              <div className="h-48 bg-slate-100 relative flex items-center justify-center overflow-hidden">
+              {/* Image Section (aspect-video) */}
+              <div className="relative aspect-video bg-gray-100 overflow-hidden">
                 {res.image_url ? (
                   <img
                     src={res.image_url}
                     alt={res.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    loading="lazy"
                   />
                 ) : (
-                  <span className="text-5xl group-hover:scale-125 transition-transform duration-500">
-                    🥘
-                  </span>
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                    <span className="text-4xl text-gray-400">🍽️</span>
+                  </div>
                 )}
-              </div>
+                
+                {/* Deliveroo Specifics: Gradient Bottom Overlay */}
+                <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none"></div>
 
-              <div className="p-7">
-                <h2 className="text-2xl font-bold text-slate-800 group-hover:text-orange-600 transition-colors">
-                  {res.name}
-                </h2>
-                <div className="flex items-center justify-between mt-6">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                    Premium Partner
-                  </span>
-                  <div className="flex flex-col items-end">
-                    <span className="text-orange-600 font-bold bg-orange-50 px-4 py-1.5 rounded-full text-sm border border-orange-100 shadow-sm">
-                      Fee: {(res.commission_rate * 100).toFixed(0)}%
-                    </span>
+                {/* Content over image */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <h2 className="text-xl md:text-2xl font-bold mb-2 shadow-sm drop-shadow-md">
+                    {res.name}
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-1 rounded-full text-sm font-semibold">
+                      <Star className="w-3.5 h-3.5 fill-white" />
+                      <span>{res.rating || "New"}</span>
+                    </div>
+                    <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-1 rounded-full text-sm font-semibold">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>15-25 min</span>
+                    </div>
                   </div>
                 </div>
               </div>

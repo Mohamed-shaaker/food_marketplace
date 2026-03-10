@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* This ensures the page doesn't look like a giant list */
 body {
   margin: 0;
-  background-color: #f8fafc;
+  background-color: #FAFAFA; /* DoorDash neutral canvas */
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
