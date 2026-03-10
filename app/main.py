@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from fastapi import FastAPI
@@ -41,14 +42,14 @@ app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(restaurants.router, prefix="/api/restaurants", tags=["Restaurants"])
 
 @app.on_event("startup")
-def bootstrap_demo_environment():
+async def bootstrap_demo_environment():
     if not settings.RUN_DEMO_BOOTSTRAP:
         logger.info("Skipping demo bootstrap because RUN_DEMO_BOOTSTRAP is disabled")
         return
 
     logger.info("Running demo bootstrap")
     try:
-        run_demo_bootstrap()
+        await asyncio.to_thread(run_demo_bootstrap)
     except Exception:
         logger.exception("Demo bootstrap failed during startup")
 
