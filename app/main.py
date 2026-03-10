@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,8 +12,8 @@ app = FastAPI(title=settings.PROJECT_NAME)
 logger = logging.getLogger(__name__)
 
 # --- CORS CONFIGURATION ---
-# This allows your React frontend (5173) to talk to this Backend (8000)
-origins = [
+# Local development and default URLs
+local_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5174",
@@ -20,6 +21,17 @@ origins = [
     "https://tibibu-backend.onrender.com",
     "https://tibibu-frontend.vercel.app",
 ]
+
+# Safely get ALLOWED_ORIGINS from settings, fallback to standard os.getenv
+allowed_origins_env = getattr(settings, "ALLOWED_ORIGINS", os.getenv("ALLOWED_ORIGINS", ""))
+
+if allowed_origins_env:
+    env_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+else:
+    env_origins = []
+
+# Combine local origins with environment-provided origins and remove duplicates
+origins = list(dict.fromkeys(local_origins + env_origins))
 
 app.add_middleware(
     CORSMiddleware,
