@@ -10,6 +10,7 @@ from app.models.domain import (
     PaymentTransaction,
     Restaurant,
     User,
+    UserRole,
 )
 from app.services.wallet_service import update_wallet_balance
 from fastapi import HTTPException
@@ -282,12 +283,12 @@ def _apply_order_payment_effects(db: Session, order: Order) -> None:
         f"order_{order.id}",
     )
 
-    admin_user = db.query(User).filter(User.id == 1).with_for_update().first()
+    admin_user = db.query(User).filter(User.role == UserRole.ADMIN).with_for_update().first()
     if admin_user:
         update_wallet_balance(
             db,
-            1,
-            commission_amount,
+            admin_user.id,
+            commission_amount + platform_fee,
             "credit",
             f"commission_order_{order.id}",
         )

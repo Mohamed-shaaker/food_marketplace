@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.core import security
-from app.models.domain import User, Wallet
+from app.models.domain import User, UserRole, Wallet
 from app.schemas.dto import UserCreate, UserOut, Token
 
 router = APIRouter()
@@ -36,7 +36,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db_user = User(
         email=user_in.email,
         hashed_password=hashed_password,
-        role=user_in.role,
+        role=UserRole.CUSTOMER,
     )
     db.add(db_user)
 

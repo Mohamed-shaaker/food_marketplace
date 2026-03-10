@@ -9,7 +9,7 @@ Base = declarative_base()
 class UserRole(str, PyEnum):
     CUSTOMER = "customer"
     RESTAURANT = "restaurant"
-    OWNER = "restaurant"
+    OWNER = "owner"
     DRIVER = "driver"
     ADMIN = "admin"
 

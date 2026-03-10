@@ -8,7 +8,6 @@ from app.models.domain import UserRole
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    role: UserRole = UserRole.CUSTOMER
 
 class UserOut(BaseModel):
     id: int
