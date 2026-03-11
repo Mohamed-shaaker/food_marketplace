@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "../api/axios";
+import api from "../api/axios";
 
 const OrderStatus = () => {
   const { id } = useParams();
@@ -11,10 +11,7 @@ const OrderStatus = () => {
   useEffect(() => {
     const fetchOrderStatus = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`/api/orders/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.get(`/orders/${id}/`);
         setOrder(response.data);
       } catch (err) {
         setError("Could not load order details.");

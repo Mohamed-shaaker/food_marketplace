@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "../api/axios";
+import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
 const MyOrders = () => {
@@ -14,7 +14,7 @@ const MyOrders = () => {
 
   const fetchOrders = async (currentOrders = []) => {
     try {
-      const response = await axios.get("/api/orders/my");
+      const response = await api.get("/orders/my/");
       const nextOrders = response.data;
 
       const previousById = new Map(
@@ -48,7 +48,7 @@ const MyOrders = () => {
     setProcessingOrderId(orderId);
     setErrorMessage("");
     try {
-      const response = await axios.post("/api/payments/initiate", {
+      const response = await api.post("/payments/initiate/", {
         order_id: orderId,
         phone_number: phoneNumber,
       });

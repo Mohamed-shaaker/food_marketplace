@@ -14,36 +14,25 @@ import AdminDashboard from "./pages/AdminDashboard";
 import OrderStatus from "./components/OrderStatus";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar"; // 1. Added Navbar Import
+import Footer from "./components/Footer";
 
 function App() {
   return (
     <Router>
+      <div className="min-h-screen flex flex-col">
       {/* 2. Place Navbar here so it shows on all pages */}
-      <Navbar /> 
-      
+      <Navbar />
+
+      <main className="flex-1">
       <Routes>
         {/* Public Login Page */}
         <Route path="/login" element={<Login />} />
 
-        {/* Protected Restaurant List */}
-        <Route
-          path="/restaurants"
-          element={
-            <ProtectedRoute>
-              <Restaurants />
-            </ProtectedRoute>
-          }
-        />
+        {/* Public Restaurant List — no auth required */}
+        <Route path="/restaurants" element={<Restaurants />} />
 
-        {/* Protected Dynamic Menu Page */}
-        <Route
-          path="/restaurants/:id"
-          element={
-            <ProtectedRoute>
-              <Menu />
-            </ProtectedRoute>
-          }
-        />
+        {/* Public Menu Page — no auth required */}
+        <Route path="/restaurants/:id" element={<Menu />} />
 
         {/* Protected Order Status Confirmation Page */}
         <Route
@@ -95,6 +84,10 @@ function App() {
         {/* Automatic Redirects */}
         <Route path="/" element={<Navigate to="/restaurants" replace />} />
       </Routes>
+      </main>
+
+      <Footer />
+      </div>
     </Router>
   );
 }

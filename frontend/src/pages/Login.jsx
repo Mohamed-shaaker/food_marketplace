@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios"; // Our interceptor instance
 
 const Login = () => {
@@ -7,6 +7,8 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = new URLSearchParams(location.search).get("redirect") || "/restaurants";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,7 +24,7 @@ const Login = () => {
       formData.append("password", password);
 
       // 3. Send the request
-      const response = await api.post("/api/auth/login", formData, {
+      const response = await api.post("/auth/login", formData, {
         skipAuth: true,
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -32,8 +34,8 @@ const Login = () => {
       // 4. Store the JWT
       localStorage.setItem("token", response.data.access_token);
 
-      // 5. Success! Redirect to the protected page
-      navigate("/restaurants");
+      // 5. Success! Redirect back to where they came from (or /restaurants)
+      navigate(redirectTo);
     } catch (err) {
       // Log the specific error to the console to help debugging
       console.error("Login Error:", err.response?.data);

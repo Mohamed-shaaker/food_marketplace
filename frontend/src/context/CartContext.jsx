@@ -1,9 +1,28 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
 
 const CartContext = createContext();
 
+const CART_STORAGE_KEY = "tibibu_cart";
+
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
+  // Initialise from localStorage so guests don't lose their cart on navigation
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CART_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist to localStorage every time the cart changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+    } catch {
+      // Storage quota exceeded or unavailable — fail silently
+    }
+  }, [cartItems]);
 
   // Optimistic add (instant local state update)
   const addToCart = (item) => {
@@ -31,23 +50,31 @@ export const CartProvider = ({ children }) => {
     });
   };
 
-  const clearCart = () => setCartItems([]);
+  const clearCart = () => {
+    setCartItems([]);
+    localStorage.removeItem(CART_STORAGE_KEY);
+  };
 
   const cartTotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+  
+  // Explicitly requested accessor function
+  const getCartTotal = () => cartTotal;
+  
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <CartContext.Provider
       value={{
-        cart: { items: cartItems }, // Align with Menu.jsx expecting cart.items
+        cart: { items: cartItems },
         cartItems,
         addToCart,
         removeFromCart,
         clearCart,
         cartTotal,
+        getCartTotal,
         cartCount,
       }}
     >

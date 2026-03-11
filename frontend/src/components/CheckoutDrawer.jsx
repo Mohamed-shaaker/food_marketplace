@@ -1,127 +1,111 @@
 import React, { useState } from "react";
+import { X } from "lucide-react";
 import { useCart } from "../context/CartContext";
-import axios from "../api/axios";
-import { useNavigate } from "react-router-dom"; // Add this
+import { useNavigate, useLocation } from "react-router-dom";
+import api from "../api/axios";
+import { formatCurrency } from "../utils";
 
-const CheckoutDrawer = ({ isOpen, onClose }) => {
-  const { cartItems, cartTotal, addToCart, removeFromCart, clearCart } =
-    useCart();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate(); // Add this
-  if (!isOpen) return null;
+const CheckoutDrawer = ({ isOpen, onClose, restaurantId }) => {
+  const { cartItems, clearCart, cartTotal, getCartTotal } = useCart();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [error, setError] = useState("");
+
+  // Re-evaluate on every render so it stays fresh after login
+  const isGuest = !localStorage.getItem("token");
+
   const handlePlaceOrder = async () => {
-    if (cartItems.length === 0) return;
+    // Guest redirect — preserve the current page so we can return after login
+    if (isGuest) {
+      onClose();
+      navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
+      return;
+    }
 
-    setIsSubmitting(true);
+    if (!restaurantId) {
+      setError("Could not identify the restaurant. Please go back and try again.");
+      return;
+    }
+
+    setIsPlacingOrder(true);
+    setError("");
+
+    const orderPayload = {
+      restaurant_id: restaurantId,
+      items: cartItems.map((item) => ({
+        menu_item_id: item.id,
+        quantity: item.quantity,
+      })),
+    };
+
     try {
-      const idempotencyKey =
-        window.crypto?.randomUUID?.() ?? `fallback-${Date.now()}`;
-
-      const payload = {
-        restaurant_id: cartItems[0].restaurant_id,
-        // Ensure total_amount is included as a clean number for the Decimal backend
-        total_amount: Number(cartTotal.toFixed(2)),
-        items: cartItems.map((item) => ({
-          menu_item_id: item.id,
-          quantity: parseInt(item.quantity), // Ensure this is an integer
-        })),
-      };
-
-      const response = await axios.post("/api/orders/", payload, {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-        },
-      });
-
-      if (response.status === 201 || response.status === 200) {
-        const orderId = response.data.id;
-        clearCart();
-        onClose();
-        navigate(`/order-status/${orderId}`);
-      }
-    } catch (error) {
-      console.error("Order error details:", error.response?.data);
-      if (error.response?.status === 403) {
-        alert("Session expired. Please log in again.");
-      } else {
-        // This will now show the EXACT error from the backend (like "Validation Error")
-        const errorMsg =
-          error.response?.data?.detail?.[0]?.msg ||
-          error.response?.data?.detail ||
-          "Failed to place order.";
-        alert(errorMsg);
-      }
+      const response = await api.post("/orders/", orderPayload);
+      clearCart();
+      onClose();
+      navigate("/my-orders");
+    } catch (err) {
+      // Full server response logged for debugging
+      console.error("Order placement failed:");
+      console.error("Status:", err.response?.status);
+      console.error("Server detail:", err.response?.data);
+      setError(
+        err.response?.data?.detail ?? "Failed to place order. Please try again."
+      );
     } finally {
-      setIsSubmitting(false);
+      setIsPlacingOrder(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 animate-slide-up">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-900">Your Order</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-3xl"
-          >
-            &times;
+    <div
+      className={`fixed inset-0 z-50 transition-transform duration-300 ${
+        isOpen ? "translate-x-0" : "translate-x-full"
+      }`}
+    >
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-xl font-bold">Your Order</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100">
+            <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto mb-6 space-y-4">
-          {cartItems.map((item) => (
-            <div key={item.id} className="flex justify-between items-center">
-              <div className="flex-1">
-                <h4 className="font-semibold text-slate-800">{item.name}</h4>
-                <p className="text-slate-500 text-sm">
-                  {Number(item.price).toLocaleString()} UGX each
-                </p>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {cartItems.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">Your cart is empty.</p>
+          ) : (
+            cartItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">{item.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {item.quantity} × {formatCurrency(item.price)}
+                  </p>
+                </div>
+                <p className="font-bold">{formatCurrency(item.price * item.quantity)}</p>
               </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => removeFromCart(item.id)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  disabled={isSubmitting}
-                >
-                  -
-                </button>
-                <span className="font-bold w-4 text-center">
-                  {item.quantity}
-                </span>
-                <button
-                  onClick={() => addToCart(item)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  disabled={isSubmitting}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
-        <div className="border-t pt-6">
-          <div className="flex justify-between text-xl font-bold mb-6">
+        <div className="p-4 border-t space-y-4">
+          <div className="flex justify-between font-bold text-lg">
             <span>Total</span>
-            <span>{Number(cartTotal).toLocaleString()} UGX</span>
+            <span>{formatCurrency(getCartTotal())}</span>
           </div>
-
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           <button
             onClick={handlePlaceOrder}
-            disabled={isSubmitting || cartItems.length === 0}
-            className={`w-full py-4 rounded-xl font-bold text-lg transition-colors ${
-              isSubmitting
-                ? "bg-slate-400 cursor-not-allowed"
-                : "bg-slate-900 text-white hover:bg-black"
-            }`}
+            disabled={isPlacingOrder || cartItems.length === 0}
+            className="w-full bg-black text-white font-bold py-3 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
           >
-            {isSubmitting ? "Processing..." : "Place Order"}
+            {isGuest
+              ? "Login to Order"
+              : isPlacingOrder
+              ? "Placing Order..."
+              : "Place Order"}
           </button>
         </div>
       </div>
