@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import admin_ops, auth, driver_ops, orders, payments, restaurant_ops, restaurants, webhooks
 from app.core.config import settings
+from app.core.database import engine
+from app.models.domain import Base
 from app.services.bootstrap import run_demo_bootstrap
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -54,11 +56,18 @@ app.include_router(restaurants.router, prefix="/api/restaurants", tags=["Restaur
 
 @app.on_event("startup")
 async def bootstrap_demo_environment():
-    if not settings.RUN_DEMO_BOOTSTRAP:
-        logger.info("Skipping demo bootstrap because RUN_DEMO_BOOTSTRAP is disabled")
-        return
+    # Step 1: Ensure all tables are created
+    logger.info("[Bootstrap] Creating database tables...")
+    try:
+        # This is safe to run on every startup. It only creates tables that don't exist.
+        await asyncio.to_thread(Base.metadata.create_all, bind=engine)
+        logger.info("[Bootstrap] Tables created successfully.")
+    except Exception:
+        logger.exception("[Bootstrap] Table creation failed.")
+        return  # Do not proceed if table creation fails
 
-    logger.info("Running demo bootstrap")
+    # FORCE: Always run bootstrap for this demo environment to ensure restaurants exist
+    logger.info("[Bootstrap] Running data seeder (Creating Restaurants & Menus)...")
     try:
         await asyncio.to_thread(run_demo_bootstrap)
     except Exception:

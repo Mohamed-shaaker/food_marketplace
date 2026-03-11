@@ -4,6 +4,8 @@ from app.core.database import SessionLocal
 from app.core.security import get_password_hash
 from app.models.domain import Driver, MenuItem, Restaurant, User, UserRole, Wallet
 
+from app.services.seed_restaurant import seed_restaurant_data
+
 
 def run_demo_bootstrap() -> None:
     db = SessionLocal()
@@ -99,6 +101,11 @@ def run_demo_bootstrap() -> None:
                 existing_items[name].price = price
             else:
                 db.add(MenuItem(restaurant_id=restaurant.id, name=name, price=price))
+
+        # --- Seed Multiple Restaurants for Demo ---
+        # This will create/update a diverse set of restaurants and menus.
+        print("\n[Bootstrap] Running restaurant data seeder...")
+        seed_restaurant_data(db=db, owner=owner)
 
         db.commit()
     finally:

@@ -1,100 +1,79 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy.orm import selectinload
 from typing import List
-from app.api.deps import get_db, get_current_user 
-from app.models.domain import Order, OrderStatus
-from app.schemas.dto import OrderCreate, OrderOut
-from app.services.order_service import create_order as create_order_service
-from app.services.order_service import transition_order_status
+from decimal import Decimal
+
+from app.api.deps import get_current_user, get_db
+from app.models.domain import User, Order, OrderItem, MenuItem
+from app.schemas.order import OrderCreate, OrderOut
 
 router = APIRouter()
+
 
 @router.post("/", response_model=OrderOut, status_code=status.HTTP_201_CREATED)
 def create_order(
     order_in: OrderCreate,
-    response: Response,
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    if idempotency_key:
-        existing_order = (
-            db.query(Order)
-            .options(selectinload(Order.payment_transactions))
-            .filter(
-                Order.user_id == current_user.id,
-                Order.idempotency_key == idempotency_key,
+    """
+    Create a new order from the user's cart. This is an atomic operation.
+    """
+    # Fetch all menu items at once to be efficient
+    menu_item_ids = [item.menu_item_id for item in order_in.items]
+    menu_items_db = db.query(MenuItem).filter(MenuItem.id.in_(menu_item_ids)).all()
+
+    if len(menu_items_db) != len(set(menu_item_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="One or more menu items not found."
+        )
+
+    # Verify all items are from the same restaurant
+    restaurant_id = menu_items_db[0].restaurant_id
+    if not all(item.restaurant_id == restaurant_id for item in menu_items_db):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All items in an order must be from the same restaurant.",
+        )
+
+    # Create a map for easy lookup and calculate total
+    menu_items_map = {item.id: item for item in menu_items_db}
+    total_amount = Decimal(0)
+    order_items_to_create = []
+
+    for item_in in order_in.items:
+        menu_item = menu_items_map.get(item_in.menu_item_id)
+        if not menu_item.is_available:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Item '{menu_item.name}' is currently unavailable.",
             )
-            .first()
+
+        total_amount += menu_item.price * item_in.quantity
+        order_items_to_create.append(
+            OrderItem(
+                menu_item_id=item_in.menu_item_id,
+                quantity=item_in.quantity,
+                price=menu_item.price,
+            )
         )
-        if existing_order:
-            response.status_code = status.HTTP_200_OK
-            return existing_order
 
-        foreign_order = (
-            db.query(Order)
-            .filter(Order.idempotency_key == idempotency_key)
-            .first()
-        )
-        if foreign_order and foreign_order.user_id != current_user.id:
-            raise HTTPException(status_code=409, detail="Idempotency key already used")
-
-    new_order = create_order_service(
-        db=db,
-        user_id=current_user.id,
-        restaurant_id=order_in.restaurant_id,
-        items_data=order_in.items,
-        idempotency_key=idempotency_key,
-    )
-    return new_order
-
-@router.get("/my", response_model=List[OrderOut])
-def get_my_orders(db: Session = Depends(get_db), current_user = Depends(get_current_user), limit: int = 10, offset: int = 0):
-    return (
-        db.query(Order)
-        .options(selectinload(Order.payment_transactions))
-        .filter(Order.user_id == current_user.id)
-        .order_by(Order.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
-
-@router.post("/{order_id}/confirm-payment")
-def confirm_payment(
-    order_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    order = (
-        db.query(Order)
-        .filter(Order.id == order_id, Order.user_id == current_user.id)
-        .first()
-    )
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    if order.payment_status == "completed":
-        return {"status": "already_paid"}
-
+    # Create the order and its items in a single transaction
     try:
-        transition_order_status(db, order, OrderStatus.PAID)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    order.payment_status = "completed"
-    db.commit()
-    return {"status": "success", "new_order_status": order.status}
-
-@router.get("/{order_id}", response_model=OrderOut)
-def get_order_status(order_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    order = (
-        db.query(Order)
-        .options(selectinload(Order.payment_transactions))
-        .filter(Order.id == order_id, Order.user_id == current_user.id)
-        .first()
-    )
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return order
+        new_order = Order(
+            user_id=current_user.id,
+            restaurant_id=restaurant_id,
+            total_amount=total_amount,
+            status="PENDING",
+            items=order_items_to_create,
+        )
+        db.add(new_order)
+        db.commit()
+        db.refresh(new_order)
+        return new_order
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create order.",
+        )

@@ -93,7 +93,13 @@ class MenuItemOut(BaseModel):
 class RestaurantOut(BaseModel):
     id: int
     name: str
+    description: Optional[str] = None
+    location: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
     commission_rate: float
     image_url: Optional[str] = None
+    rating: Optional[float] = None
+    is_active: bool
     menu_items: List[MenuItemOut] = Field(default_factory=list)
     model_config = {"from_attributes": True}

@@ -49,8 +49,14 @@ class Restaurant(Base):
     id = Column(Integer, primary_key=True, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String, index=True)
+    description = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    contact_phone = Column(String, nullable=True)
+    contact_email = Column(String, nullable=True)
     commission_rate = Column(Float, default=0.10)
     image_url = Column(String, nullable=True)
+    rating = Column(Float, nullable=True)
+    is_active = Column(Boolean, default=True)
     
     owner = relationship("User", back_populates="restaurants")
     menu_items = relationship("MenuItem", back_populates="restaurant")
@@ -59,7 +65,11 @@ class MenuItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"))
     name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
     price = Column(Numeric(12, 2), nullable=False)
+    image_url = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    is_available = Column(Boolean, default=True, nullable=False)
     restaurant = relationship("Restaurant", back_populates="menu_items")
 
 class Order(Base):
