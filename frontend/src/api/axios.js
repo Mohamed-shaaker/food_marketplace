@@ -8,6 +8,7 @@ const api = axios.create({
   headers: {
     Accept: "application/json",
   },
+  timeout: 60000,
 });
 
 // REQUEST INTERCEPTOR: Automatically add JWT token to every request

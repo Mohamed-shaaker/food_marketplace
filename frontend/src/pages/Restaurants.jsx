@@ -31,14 +31,18 @@ const getCuisineIcon = (cuisineName) => {
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
-const LoadingScreen = () => (
+const LoadingScreen = ({ isWakingUp }) => (
   <div className="flex h-screen items-center justify-center bg-[#FAFAFA]">
     <div className="flex flex-col items-center gap-3">
       <div className="relative w-12 h-12">
         <div className="absolute inset-0 rounded-full border-4 border-gray-100" />
         <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
-      <p className="text-sm font-medium text-gray-400">Loading restaurants…</p>
+      <p className="text-sm font-medium text-gray-900 text-center px-4">
+        {isWakingUp 
+          ? "Waking up the kitchen... This usually takes ~30 seconds on free servers."
+          : "Loading restaurants…"}
+      </p>
     </div>
   </div>
 );
@@ -188,25 +192,54 @@ function Restaurants() {
   const [restaurants, setRestaurants] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isWakingUp, setIsWakingUp] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState("All");
 
   useEffect(() => {
+    let isMounted = true;
+    
+    // Helper to wait N milliseconds
+    const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
     const fetchRestaurants = async () => {
       setIsLoading(true);
-      try {
-        const response = await api.get("/restaurants/");
-        setRestaurants(response.data);
-        setError(null);
-      } catch (e) {
-        console.error("Fetch error:", e);
-        setError("Failed to load restaurants. The kitchen might be closed!");
-      } finally {
-        setIsLoading(false);
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts && isMounted) {
+        try {
+          const response = await api.get("/restaurants/");
+          if (isMounted) {
+            setRestaurants(response.data);
+            setError(null);
+            setIsLoading(false);
+          }
+          return; // Success! Exit loop early.
+        } catch (e) {
+          attempts++;
+          console.warn(`Fetch attempt ${attempts} failed:`, e.message);
+          
+          if (attempts < maxAttempts) {
+            // First failure detected -> Render backend is likely cold starting.
+            // Tell the user what's happening and wait 5 seconds before retrying.
+            if (isMounted) setIsWakingUp(true);
+            await delay(5000);
+          } else {
+            // All attempts exhausted.
+            console.error("All fetch attempts failed:", e);
+            if (isMounted) {
+              setError("Failed to load restaurants. The kitchen might be closed!");
+              setIsLoading(false);
+            }
+          }
+        }
       }
     };
 
     fetchRestaurants();
+    
+    return () => { isMounted = false; };
   }, []);
 
   const allCuisines = useMemo(() => {
@@ -232,7 +265,7 @@ function Restaurants() {
   }, [restaurants, searchTerm, selectedCuisine]);
 
   // ── Loading / Error ────────────────────────────────────────────────────────
-  if (isLoading) return <LoadingScreen />;
+  if (isLoading) return <LoadingScreen isWakingUp={isWakingUp} />;
   if (error) return <ErrorScreen message={error} />;
 
   // ── Render ─────────────────────────────────────────────────────────────────
