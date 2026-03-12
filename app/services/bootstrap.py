@@ -6,6 +6,53 @@ from app.models.domain import Driver, MenuItem, Restaurant, User, UserRole, Wall
 
 from app.services.seed_restaurant import seed_restaurant_data
 
+def populate_missing_restaurant_fields(db) -> None:
+    restaurants = db.query(Restaurant).all()
+    updates_made = 0
+    for r in restaurants:
+        if r.name and "Kampala Pizza" in r.name:
+            if not r.image_url or "pexels" not in r.image_url:
+                r.image_url = "https://images.pexels.com/photos/1146760/pexels-photo-1146760.jpeg"
+                updates_made += 1
+            if not r.description:
+                r.description = "The best wood-fired pizzas in Kampala. Fresh ingredients and authentic recipe."
+                updates_made += 1
+            if r.rating is None:
+                r.rating = 4.8
+                updates_made += 1
+            if r.is_active is None:
+                r.is_active = True
+                updates_made += 1
+        elif r.name and "Rolex" in r.name:
+            if not r.image_url or "pexels" not in r.image_url:
+                r.image_url = "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg"
+                updates_made += 1
+            if not r.description:
+                r.description = "Iconic Ugandan street food. Freshly rolled rolexes with premium ingredients."
+                updates_made += 1
+            if r.rating is None:
+                r.rating = 4.6
+                updates_made += 1
+            if r.is_active is None:
+                r.is_active = True
+                updates_made += 1
+        else:
+            if not r.image_url:
+                r.image_url = "https://images.pexels.com/photos/262959/pexels-photo-262959.jpeg"
+                updates_made += 1
+            if not r.description:
+                r.description = "A wonderful place to enjoy delicious meals with your family and friends."
+                updates_made += 1
+            if r.rating is None:
+                r.rating = 4.0
+                updates_made += 1
+            if r.is_active is None:
+                r.is_active = True
+                updates_made += 1
+    if updates_made > 0:
+        db.flush()
+        print(f"[Bootstrap] Auto-populated {updates_made} missing fields for restaurants.")
+
 
 def run_demo_bootstrap() -> None:
     db = SessionLocal()
@@ -106,6 +153,10 @@ def run_demo_bootstrap() -> None:
         # This will create/update a diverse set of restaurants and menus.
         print("\n[Bootstrap] Running restaurant data seeder...")
         seed_restaurant_data(db=db, owner=owner)
+
+        # --- Backfill Missing Image/Descriptions ---
+        print("\n[Bootstrap] Ensuring all restaurants have images and descriptions...")
+        populate_missing_restaurant_fields(db)
 
         db.commit()
     finally:

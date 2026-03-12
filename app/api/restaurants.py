@@ -7,6 +7,7 @@ from app.schemas.dto import RestaurantOut, MenuItemOut
 
 router = APIRouter()
 
+@router.get("", response_model=list[RestaurantOut], include_in_schema=False)
 @router.get("/", response_model=list[RestaurantOut])
 def list_restaurants(db: Session = Depends(get_db)):
     return (
