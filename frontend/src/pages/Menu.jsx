@@ -8,12 +8,14 @@ import {
   Star,
   Clock,
   UtensilsCrossed,
+  RotateCw,
 } from "lucide-react";
 import api from "../api/axios";
 import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils";
 import CartBanner from "../components/CartBanner";
 import CheckoutDrawer from "../components/CheckoutDrawer";
+import { MenuItemSkeleton } from "../components/LoadingSkeletons";
 
 // ─── Micro-components ─────────────────────────────────────────────────────────
 
@@ -24,28 +26,37 @@ const LoadingScreen = () => (
         <div className="absolute inset-0 rounded-full border-4 border-gray-100" />
         <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
-      <p className="text-sm font-medium text-gray-400 tracking-wide">
-        Loading menu…
+      <p className="text-sm font-medium text-gray-900 tracking-wide">
+        Tibibu is waking up...
       </p>
     </div>
   </div>
 );
 
-const ErrorScreen = ({ message, onBack }) => (
+const ErrorScreen = ({ message, onRetry, onBack }) => (
   <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
     <div className="text-center max-w-xs">
       <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
         <UtensilsCrossed className="w-8 h-8 text-red-400" />
       </div>
-      <h2 className="text-lg font-bold text-gray-900 mb-1">Oops!</h2>
-      <p className="text-sm text-red-500 mb-6">{message}</p>
-      <button
-        onClick={onBack}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-full hover:bg-gray-700 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Go Back
-      </button>
+      <h2 className="text-lg font-bold text-gray-900 mb-1">Connection Lost</h2>
+      <p className="text-sm text-gray-500 mb-6">{message}</p>
+      <div className="flex gap-3 justify-center">
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-800 active:scale-95 transition-all"
+        >
+          <RotateCw className="w-4 h-4" />
+          Retry
+        </button>
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-900 text-sm font-semibold rounded-full hover:bg-gray-300 active:scale-95 transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Go Back
+        </button>
+      </div>
     </div>
   </div>
 );
@@ -63,6 +74,7 @@ const Menu = () => {
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   const { cartItems, addToCart, removeFromCart } = useCart();
 
@@ -70,19 +82,24 @@ const Menu = () => {
     const fetchMenu = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await api.get(`/restaurants/${id}/`);
         const restaurantData = response.data;
         setRestaurant(restaurantData);
         setMenuItems(restaurantData.menu_items || []);
       } catch (err) {
-        setError("Failed to load the menu. Please try again.");
+        setError(
+          err.response?.status === 404
+            ? "Restaurant not found"
+            : "Failed to load the menu. Please check your connection."
+        );
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
     fetchMenu();
-  }, [id]);
+  }, [id, retryCount]);
 
   const categories = useMemo(() => {
     if (!menuItems || menuItems.length === 0) return ["All"];
@@ -116,7 +133,14 @@ const Menu = () => {
 
   // ── Loading / Error ────────────────────────────────────────────────────────
   if (loading) return <LoadingScreen />;
-  if (error) return <ErrorScreen message={error} onBack={() => navigate(-1)} />;
+  if (error)
+    return (
+      <ErrorScreen
+        message={error}
+        onRetry={() => setRetryCount((c) => c + 1)}
+        onBack={() => navigate(-1)}
+      />
+    );
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -124,7 +148,7 @@ const Menu = () => {
 
       {/* ══ Hero Header ══════════════════════════════════════════════════════ */}
       <div className="relative h-56 md:h-72 bg-slate-800 overflow-hidden">
-        {/* Background image */}
+        {/* Background image with object-fit: cover */}
         {restaurant?.image_url ? (
           <img
             src={restaurant.image_url}
@@ -263,7 +287,7 @@ const Menu = () => {
 
                     {/* Right: Image + floating quantity bubble */}
                     <div className="relative flex-shrink-0 self-center" style={{ paddingBottom: "14px" }}>
-                      {/* Food image */}
+                      {/* Food image with object-fit: cover */}
                       <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
                         {item.image_url ? (
                           <img
@@ -344,6 +368,7 @@ const Menu = () => {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         restaurantId={restaurant?.id}
+        restaurantName={restaurant?.name}
       />
     </div>
   );

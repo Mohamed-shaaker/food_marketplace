@@ -8,8 +8,10 @@ import {
   Hamburger,
   Salad,
   Utensils,
+  RotateCw,
 } from "lucide-react";
 import api from "../api/axios";
+import { RestaurantCardSkeleton } from "../components/LoadingSkeletons";
 
 // ─── Helper: Map cuisine names to icons ──────────────────────────────────────
 
@@ -40,23 +42,30 @@ const LoadingScreen = ({ isWakingUp }) => (
       </div>
       <p className="text-sm font-medium text-gray-900 text-center px-4">
         {isWakingUp 
-          ? "Waking up the kitchen... This usually takes ~30 seconds on free servers."
+          ? "Tibibu is waking up... This usually takes ~30 seconds on free servers."
           : "Loading restaurants…"}
       </p>
     </div>
   </div>
 );
 
-const ErrorScreen = ({ message }) => (
+const ErrorScreen = ({ message, onRetry }) => (
   <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
     <div className="text-center max-w-sm">
       <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
         <Utensils className="w-8 h-8 text-red-400" />
       </div>
-      <h2 className="text-lg font-bold text-gray-900 mb-2">Something went wrong</h2>
-      <p className="text-sm text-red-500">{message}</p>
-      <p className="text-xs text-gray-400 mt-3">
-        Please check your connection or try again later.
+      <h2 className="text-lg font-bold text-gray-900 mb-2">Connection Timeout</h2>
+      <p className="text-sm text-gray-500 mb-6">{message}</p>
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center gap-2 px-6 py-3 bg-black text-white font-semibold rounded-full hover:bg-gray-800 active:scale-95 transition-all"
+      >
+        <RotateCw className="w-4 h-4" />
+        Retry Connection
+      </button>
+      <p className="text-xs text-gray-400 mt-4">
+        Check your connection or try again later
       </p>
     </div>
   </div>
@@ -132,7 +141,7 @@ const RestaurantCard = ({ restaurant }) => {
       to={`/restaurants/${restaurant.id}`}
       className="group block bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:scale-105 transition-all duration-300"
     >
-      {/* Image — 16:9 aspect ratio */}
+      {/* Image — 16:9 aspect ratio with object-fit: cover */}
       <div className="relative w-full aspect-video overflow-hidden rounded-t-2xl bg-gray-50">
         <img
           src={restaurant.image_url}
@@ -195,6 +204,7 @@ function Restaurants() {
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState("All");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -204,6 +214,7 @@ function Restaurants() {
 
     const fetchRestaurants = async () => {
       setIsLoading(true);
+      setIsWakingUp(false);
       let attempts = 0;
       const maxAttempts = 3;
 
@@ -229,7 +240,7 @@ function Restaurants() {
             // All attempts exhausted.
             console.error("All fetch attempts failed:", e);
             if (isMounted) {
-              setError("Failed to load restaurants. The kitchen might be closed!");
+              setError("Failed to load restaurants. Please check your connection.");
               setIsLoading(false);
             }
           }
@@ -240,18 +251,18 @@ function Restaurants() {
     fetchRestaurants();
     
     return () => { isMounted = false; };
-  }, []);
+  }, [retryCount]);
 
   const allCuisines = useMemo(() => {
     const cuisines = new Set();
-    restaurants.forEach((r) => {
+    (restaurants || []).forEach((r) => {
       (r.menu_items || []).forEach((item) => cuisines.add(item.category));
     });
     return Array.from(cuisines).sort();
   }, [restaurants]);
 
   const filteredRestaurants = useMemo(() => {
-    return restaurants
+    return (restaurants || [])
       .filter((restaurant) => {
         if (selectedCuisine === "All") return true;
         const restaurantCuisines = new Set(
@@ -266,7 +277,7 @@ function Restaurants() {
 
   // ── Loading / Error ────────────────────────────────────────────────────────
   if (isLoading) return <LoadingScreen isWakingUp={isWakingUp} />;
-  if (error) return <ErrorScreen message={error} />;
+  if (error) return <ErrorScreen message={error} onRetry={() => setRetryCount((c) => c + 1)} />;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -274,7 +285,7 @@ function Restaurants() {
 
       {/* ══ Hero Section ══════════════════════════════════════════════════════ */}
       <div className="relative h-64 md:h-80 bg-slate-800 overflow-hidden">
-        {/* Hero background image with overlay */}
+        {/* Hero background image with object-fit: cover */}
         <img
           src="https://images.pexels.com/photos/1640773/pexels-photo-1640773.jpeg?w=1200&h=600&auto=compress&cs=tinysrgb"
           alt="Food"
