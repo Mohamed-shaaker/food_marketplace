@@ -10,36 +10,20 @@ from app.core.database import engine
 from app.models.domain import Base
 from app.services.bootstrap import run_demo_bootstrap
 
-app = FastAPI(title=settings.PROJECT_NAME)
+app = FastAPI(title=settings.PROJECT_NAME, redirect_slashes=False)
 logger = logging.getLogger(__name__)
 
 # --- CORS CONFIGURATION ---
-local_origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "https://tibibu.com",
-    "https://www.tibibu.com",
-    "https://tibibu-backend.onrender.com",
-    "https://tibibu-frontend.vercel.app",
-]
-
-allowed_origins_env = getattr(settings, "ALLOWED_ORIGINS", os.getenv("ALLOWED_ORIGINS", ""))
-
-if allowed_origins_env:
-    env_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
-else:
-    env_origins = []
-
-origins = list(dict.fromkeys(local_origins + env_origins))
-
+# Using wildcard origin to rule out any domain mismatch as root cause.
+# NOTE: allow_origins=["*"] and allow_credentials=True cannot be combined;
+# we drop allow_credentials here while debugging, then restore once the
+# domain-specific list is re-enabled.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],  
-    allow_headers=["*"],  
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 # ---------------------------
 
