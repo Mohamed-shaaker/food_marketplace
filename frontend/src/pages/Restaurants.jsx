@@ -11,9 +11,6 @@ import {
   RotateCw,
 } from "lucide-react";
 import api from "../api/axios";
-import { RestaurantCardSkeleton } from "../components/LoadingSkeletons";
-
-// ─── Helper: Map cuisine names to icons ──────────────────────────────────────
 
 const CUISINE_ICONS = {
   pizza: Pizza,
@@ -26,12 +23,8 @@ const CUISINE_ICONS = {
 
 const getCuisineIcon = (cuisineName) => {
   const key = cuisineName?.toLowerCase().trim();
-  return (
-    CUISINE_ICONS[key] || CUISINE_ICONS.general
-  );
+  return CUISINE_ICONS[key] || CUISINE_ICONS.general;
 };
-
-// ─── Sub-components ─────────────────────────────────────────────────────────
 
 const LoadingScreen = ({ isWakingUp }) => (
   <div className="flex h-screen items-center justify-center bg-[#FAFAFA]">
@@ -41,7 +34,7 @@ const LoadingScreen = ({ isWakingUp }) => (
         <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
       <p className="text-sm font-medium text-gray-900 text-center px-4">
-        {isWakingUp 
+        {isWakingUp
           ? "Tibibu is waking up... This usually takes ~30 seconds on free servers."
           : "Loading restaurants…"}
       </p>
@@ -55,7 +48,9 @@ const ErrorScreen = ({ message, onRetry }) => (
       <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
         <Utensils className="w-8 h-8 text-red-400" />
       </div>
-      <h2 className="text-lg font-bold text-gray-900 mb-2">Connection Timeout</h2>
+      <h2 className="text-lg font-bold text-gray-900 mb-2">
+        Connection Timeout
+      </h2>
       <p className="text-sm text-gray-500 mb-6">{message}</p>
       <button
         onClick={onRetry}
@@ -73,7 +68,6 @@ const ErrorScreen = ({ message, onRetry }) => (
 
 const CuisineScroller = ({ cuisines, selectedCuisine, onSelectCuisine }) => (
   <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2">
-    {/* All button */}
     <button
       onClick={() => onSelectCuisine("All")}
       className={`flex flex-col items-center gap-2 py-2 px-1 rounded-lg transition-all duration-200 flex-shrink-0 ${
@@ -96,7 +90,6 @@ const CuisineScroller = ({ cuisines, selectedCuisine, onSelectCuisine }) => (
       </span>
     </button>
 
-    {/* Cuisine buttons */}
     {cuisines.map((cuisine) => {
       const IconComponent = getCuisineIcon(cuisine);
       const isSelected = selectedCuisine === cuisine;
@@ -141,7 +134,6 @@ const RestaurantCard = ({ restaurant }) => {
       to={`/restaurants/${restaurant.id}`}
       className="group block bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:scale-105 transition-all duration-300"
     >
-      {/* Image — 16:9 aspect ratio with object-fit: cover */}
       <div className="relative w-full aspect-video overflow-hidden rounded-t-2xl bg-gray-50">
         <img
           src={restaurant.image_url}
@@ -150,26 +142,19 @@ const RestaurantCard = ({ restaurant }) => {
           loading="lazy"
           onError={handleImageError}
         />
-
-        {/* Overlay badges — positioned top-right */}
         <div className="absolute top-2.5 right-2.5 flex items-center gap-2">
-          {/* Rating badge */}
           <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm shadow-sm">
             <Star className="w-3.5 h-3.5 fill-amber-400 stroke-amber-400" />
             <span className="text-xs font-bold text-gray-900">
               {restaurant.rating || "New"}
             </span>
           </div>
-
-          {/* Delivery time badge */}
           <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm shadow-sm">
             <Clock className="w-3 h-3 text-gray-600" />
             <span className="text-xs font-medium text-gray-700">15–30</span>
           </div>
         </div>
       </div>
-
-      {/* Info section */}
       <div className="p-4">
         <h3 className="text-base font-bold text-gray-900 truncate group-hover:text-primary transition-colors">
           {restaurant.name}
@@ -177,8 +162,6 @@ const RestaurantCard = ({ restaurant }) => {
         <p className="text-xs text-gray-400 line-clamp-2 mt-1.5 leading-relaxed">
           {restaurant.description || "Delicious food delivered fresh."}
         </p>
-
-        {/* Category tags (first 2 cuisines) */}
         <div className="flex items-center gap-1.5 mt-3 flex-wrap">
           {restaurant.menu_items?.slice(0, 2).map((item, idx) => (
             <span
@@ -194,10 +177,7 @@ const RestaurantCard = ({ restaurant }) => {
   );
 };
 
-// ─── Main Component ─────────────────────────────────────────────────────────
-
 function Restaurants() {
-  // ── Original state & logic (preserved exactly) ──────────────────────────────
   const [restaurants, setRestaurants] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -208,8 +188,6 @@ function Restaurants() {
 
   useEffect(() => {
     let isMounted = true;
-    
-    // Helper to wait N milliseconds
     const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
     const fetchRestaurants = async () => {
@@ -226,21 +204,20 @@ function Restaurants() {
             setError(null);
             setIsLoading(false);
           }
-          return; // Success! Exit loop early.
+          return;
         } catch (e) {
           attempts++;
           console.warn(`Fetch attempt ${attempts} failed:`, e.message);
-          
+
           if (attempts < maxAttempts) {
-            // First failure detected -> Render backend is likely cold starting.
-            // Tell the user what's happening and wait 5 seconds before retrying.
             if (isMounted) setIsWakingUp(true);
             await delay(5000);
           } else {
-            // All attempts exhausted.
             console.error("All fetch attempts failed:", e);
             if (isMounted) {
-              setError("Failed to load restaurants. Please check your connection.");
+              setError(
+                "Failed to load restaurants. Please check your connection.",
+              );
               setIsLoading(false);
             }
           }
@@ -249,8 +226,10 @@ function Restaurants() {
     };
 
     fetchRestaurants();
-    
-    return () => { isMounted = false; };
+
+    return () => {
+      isMounted = false;
+    };
   }, [retryCount]);
 
   const allCuisines = useMemo(() => {
@@ -275,17 +254,18 @@ function Restaurants() {
       });
   }, [restaurants, searchTerm, selectedCuisine]);
 
-  // ── Loading / Error ────────────────────────────────────────────────────────
   if (isLoading) return <LoadingScreen isWakingUp={isWakingUp} />;
-  if (error) return <ErrorScreen message={error} onRetry={() => setRetryCount((c) => c + 1)} />;
+  if (error)
+    return (
+      <ErrorScreen
+        message={error}
+        onRetry={() => setRetryCount((c) => c + 1)}
+      />
+    );
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="bg-[#FAFAFA] min-h-screen pb-32">
-
-      {/* ══ Hero Section ══════════════════════════════════════════════════════ */}
       <div className="relative h-64 md:h-80 bg-slate-800 overflow-hidden">
-        {/* Hero background image with object-fit: cover */}
         <img
           src="https://images.pexels.com/photos/1640773/pexels-photo-1640773.jpeg?w=1200&h=600&auto=compress&cs=tinysrgb"
           alt="Food"
@@ -293,17 +273,15 @@ function Restaurants() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/75" />
 
-        {/* Text content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-sm">
             Kampala's Best Flavors
           </h1>
           <p className="text-sm md:text-base text-white/80 mb-6 drop-shadow-sm max-w-lg">
-            Discover delicious meals from top restaurants, delivered fresh to your
-            door
+            Discover delicious meals from top restaurants, delivered fresh to
+            your door
           </p>
 
-          {/* Search bar integrated in hero */}
           <div className="w-full max-w-lg">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
@@ -327,10 +305,7 @@ function Restaurants() {
         </div>
       </div>
 
-      {/* ══ Main content ══════════════════════════════════════════════════════ */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8">
-
-        {/* ── Cuisine scroller ── */}
         <div className="mb-10">
           <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">
             Browse by Cuisine
@@ -342,7 +317,6 @@ function Restaurants() {
           />
         </div>
 
-        {/* ── Restaurant grid ── */}
         {filteredRestaurants.length > 0 ? (
           <>
             <div className="mb-4">
@@ -355,7 +329,10 @@ function Restaurants() {
               </h2>
               <p className="text-xs text-gray-400 mt-1">
                 {filteredRestaurants.length}{" "}
-                {filteredRestaurants.length === 1 ? "restaurant" : "restaurants"} found
+                {filteredRestaurants.length === 1
+                  ? "restaurant"
+                  : "restaurants"}{" "}
+                found
               </p>
             </div>
 
@@ -366,12 +343,13 @@ function Restaurants() {
             </div>
           </>
         ) : (
-          /* Empty state */
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
               <Search className="w-7 h-7 text-gray-300" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">No restaurants found</h3>
+            <h3 className="text-lg font-bold text-gray-900">
+              No restaurants found
+            </h3>
             <p className="text-sm text-gray-400 mt-2">
               Try adjusting your search or filters
             </p>

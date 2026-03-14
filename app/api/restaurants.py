@@ -1,33 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import selectinload
-from app.api.deps import get_db
-from app.models.domain import Restaurant, MenuItem
-from app.schemas.dto import RestaurantOut, MenuItemOut
+from sqlalchemy.orm import Session, joinedload
+from typing import List
 
+from app.core.database import get_db
+from app.models.domain import Restaurant
+from app.schemas.dto import RestaurantOut as RestaurantSchema
 router = APIRouter()
 
-@router.get("", response_model=list[RestaurantOut], include_in_schema=False)
-@router.get("/", response_model=list[RestaurantOut])
-def list_restaurants(db: Session = Depends(get_db)):
-    return (
-        db.query(Restaurant)
-        .options(selectinload(Restaurant.menu_items))
-        .all()
-    )
+@router.get("/", response_model=List[RestaurantSchema])
+def get_restaurants(db: Session = Depends(get_db)):
+    """
+    Retrieve all restaurants with their menu items.
+    """
+    restaurants = db.query(Restaurant).options(joinedload(Restaurant.menu_items)).all()
+    return restaurants
 
-@router.get("/{id}/", response_model=RestaurantOut) # Added trailing slash
-def get_restaurant(id: int, db: Session = Depends(get_db)):
+@router.get("/{restaurant_id}", response_model=RestaurantSchema)
+def get_restaurant_by_id(restaurant_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieve a single restaurant by its ID, including its menu items.
+    """
     restaurant = (
         db.query(Restaurant)
-        .options(selectinload(Restaurant.menu_items))
-        .filter(Restaurant.id == id)
+        .options(joinedload(Restaurant.menu_items))
+        .filter(Restaurant.id == restaurant_id)
         .first()
     )
-    if restaurant is None:
+    if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     return restaurant
-
-@router.get("/{id}/menu/", response_model=list[MenuItemOut]) # Added trailing slash
-def list_menu_items(id: int, db: Session = Depends(get_db)):
-    return db.query(MenuItem).filter(MenuItem.restaurant_id == id).all()
