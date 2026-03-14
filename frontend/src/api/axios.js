@@ -5,10 +5,11 @@ const API_BASE_URL =
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     Accept: "application/json",
   },
-  timeout: 60000,
+  timeout: 0,
 });
 
 // REQUEST INTERCEPTOR: Automatically add JWT token to every request
