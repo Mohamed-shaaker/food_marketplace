@@ -57,6 +57,7 @@ async def bootstrap_demo_environment():
         logger.exception("Demo bootstrap failed during startup")
 
 @app.get("/health")
+@app.head("/health")
 def health_check():
     return {"status": "healthy"}
 
@@ -65,5 +66,6 @@ def health_check_slash():
     return {"status": "healthy"}
 
 @app.get("/")
+@app.head("/")
 def root():
     return {"status": "ok", "service": settings.PROJECT_NAME}
