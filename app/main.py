@@ -56,11 +56,14 @@ async def bootstrap_demo_environment():
         logger.exception("[Bootstrap] Table creation failed.")
         return  
 
-    logger.info("[Bootstrap] Running data seeder (Creating Restaurants & Menus)...")
-    try:
-        await asyncio.to_thread(run_demo_bootstrap)
-    except Exception:
-        logger.exception("Demo bootstrap failed during startup")
+    if settings.RUN_DEMO_BOOTSTRAP:
+        logger.info("[Bootstrap] Running data seeder (Creating Restaurants & Menus)...")
+        try:
+            await asyncio.to_thread(run_demo_bootstrap)
+        except Exception:
+            logger.exception("Demo bootstrap failed during startup")
+    else:
+        logger.info("[Bootstrap] RUN_DEMO_BOOTSTRAP is disabled, skipping seeder.")
 
 @app.get("/health")
 @app.head("/health")
