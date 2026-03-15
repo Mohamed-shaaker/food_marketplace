@@ -6,11 +6,11 @@ const API_BASE_URL =
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true,
+  withCredentials: false,
   headers: {
     Accept: "application/json",
   },
-  timeout: 0,
+  timeout: 30000, // 30 s — allows Render free-tier cold start to wake up
 });
 
 api.interceptors.request.use(

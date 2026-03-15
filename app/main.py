@@ -14,16 +14,19 @@ app = FastAPI(title=settings.PROJECT_NAME, redirect_slashes=False)
 logger = logging.getLogger(__name__)
 
 # --- CORS CONFIGURATION ---
-# Using wildcard origin to rule out any domain mismatch as root cause.
-# NOTE: allow_origins=["*"] and allow_credentials=True cannot be combined;
-# we drop allow_credentials here while debugging, then restore once the
-# domain-specific list is re-enabled.
+# Parse ALLOWED_ORIGINS from env var (comma-separated list).
+# Falls back to wildcard only when no origins are configured (local dev).
+_raw_origins = settings.ALLOWED_ORIGINS or ""
+_origin_list = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+allow_origins = _origin_list if _origin_list else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
+    allow_origins=allow_origins,
+    allow_credentials=bool(_origin_list),   # True only when explicit domains set
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 # ---------------------------
 
