@@ -5,7 +5,7 @@
       "destination": "https://tibibu-backend.onrender.com/api/:path*"
     },
     {
-      "source": "/((?!assets/|favicon.ico|logo192.png).* )",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
