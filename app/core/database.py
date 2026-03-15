@@ -3,8 +3,12 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
 # --- Keep your existing engine setup ---
+db_url = settings.DATABASE_URL
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(
-    settings.DATABASE_URL,
+    db_url,
     pool_size=5,
     max_overflow=5,
     pool_timeout=10,

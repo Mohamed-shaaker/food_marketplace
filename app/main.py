@@ -48,22 +48,28 @@ app.include_router(restaurants.router, prefix="/api/restaurants", tags=["Restaur
 
 @app.on_event("startup")
 async def bootstrap_demo_environment():
-    logger.info("[Bootstrap] Creating database tables...")
-    try:
-        await asyncio.to_thread(Base.metadata.create_all, bind=engine)
-        logger.info("[Bootstrap] Tables created successfully.")
-    except Exception:
-        logger.exception("[Bootstrap] Table creation failed.")
-        return  
-
-    if settings.RUN_DEMO_BOOTSTRAP:
-        logger.info("[Bootstrap] Running data seeder (Creating Restaurants & Menus)...")
+    async def init_db():
+        logger.info("[Bootstrap] Creating database tables...")
         try:
-            await asyncio.to_thread(run_demo_bootstrap)
-        except Exception:
-            logger.exception("Demo bootstrap failed during startup")
-    else:
-        logger.info("[Bootstrap] RUN_DEMO_BOOTSTRAP is disabled, skipping seeder.")
+            await asyncio.to_thread(Base.metadata.create_all, bind=engine)
+            logger.info("[Bootstrap] Tables created successfully.")
+        except Exception as e:
+            logger.exception(f"[Bootstrap] Table creation failed: {e}")
+            return  
+
+        if settings.RUN_DEMO_BOOTSTRAP:
+            logger.info("[Bootstrap] Running data seeder (Creating Restaurants & Menus)...")
+            try:
+                await asyncio.to_thread(run_demo_bootstrap)
+            except Exception as e:
+                logger.exception(f"Demo bootstrap failed during startup: {e}")
+        else:
+            logger.info("[Bootstrap] RUN_DEMO_BOOTSTRAP is disabled, skipping seeder.")
+
+    # Schedule database initialization as a background task.
+    # This ensures Uvicorn finishes starting instantly and can respond to Railway health checks
+    # even if the cross-region database connection takes a few seconds.
+    asyncio.create_task(init_db())
 
 @app.get("/health")
 @app.head("/health")
