@@ -18,12 +18,18 @@ logger = logging.getLogger(__name__)
 # Falls back to wildcard only when no origins are configured (local dev).
 _raw_origins = settings.ALLOWED_ORIGINS or ""
 _origin_list = [o.strip() for o in _raw_origins.split(",") if o.strip()]
-allow_origins = _origin_list if _origin_list else ["*"]
+
+if not _origin_list or "*" in _origin_list:
+    allow_origins = ["*"]
+    allow_credentials = False
+else:
+    allow_origins = _origin_list
+    allow_credentials = True
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_credentials=bool(_origin_list),   # True only when explicit domains set
+    allow_credentials=allow_credentials,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
